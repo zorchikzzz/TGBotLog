@@ -89,14 +89,11 @@ namespace FamilyBudgetBot.Services
                 // Ищем категорию по имени в базе данных
                 var category = _repository.GetCategoryByName(categoryName);
 
-                // Если категория не найдена, создаем новую
+                // Если категория не найдена, возвращаем ошибку
                 if (category == null)
                 {
-                    // Создаем новую категорию и получаем её ID
-                    var categoryId = _repository.AddCategory(categoryName);
-
-                    // Создаем объект категории для использования в транзакции
-                    category = new Category { Id = categoryId, Name = categoryName };
+                    return (false, $"❌ Категория '{categoryName}' не найдена. " +
+                                   "Сначала добавьте категорию с помощью команды /addcategory");
                 }
 
                 // Создаем объект транзакции с полученными данными

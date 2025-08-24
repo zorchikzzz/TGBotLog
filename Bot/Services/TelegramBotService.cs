@@ -84,7 +84,8 @@ namespace FamilyBudgetBot.Bot.Services
             var message = update.Message;
             var chatId = message.Chat.Id;
             var text = message.Text!;
-           
+                        
+            
             try
             {
                 // ѕровер€ем, есть ли ожидаемое действие дл€ этого чата
