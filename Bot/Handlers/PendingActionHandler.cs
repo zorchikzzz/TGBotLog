@@ -53,65 +53,7 @@ namespace FamilyBudgetBot.Bot.Handlers
                                      categoryType == TransactionType.Expense ? "расходов" : "накоплений";
                     await _bot.SendTextMessageAsync(chatId, $"✅ Категория {typeName} '{text}' добавлена!");
                     break;
-
-                case "SELECT_CATEGORY":
-                    if (int.TryParse(text, out int categoryId))
-                    {
-                        var category = _budgetService.GetCategoryById(categoryId);
-                        if (category != null)
-                        {
-                            await _bot.SendTextMessageAsync(
-                                chatId,
-                                $"📝 Выбрана категория: {category.Name}\nВведите сумму и описание через пробел:"
-                            );
-                            _pendingActions[chatId] = ("ADD_TRANSACTION", categoryId);
-                        }
-                        else
-                        {
-                            await _bot.SendTextMessageAsync(chatId, "❌ Категория не найдена");
-                            await ShowCategorySelection(chatId);
-                        }
-                    }
-                    else
-                    {
-                        await _bot.SendTextMessageAsync(chatId, "❌ Неверный формат. Введите номер категории:");
-                        await ShowCategorySelection(chatId);
-                    }
-                    break;
-
-                case "ADD_TRANSACTION":
-                    var parts = text.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length >= 1 && decimal.TryParse(parts[0], NumberStyles.Any, CultureInfo.InvariantCulture, out decimal amount))
-                    {
-                        var categoryIdValue = pending.CategoryId ?? 0;
-                        var description = parts.Length > 1 ? parts[1] : "Без описания";
-
-                        var category = _budgetService.GetCategoryById(categoryIdValue);
-
-                        var transaction = new Transaction
-                        {
-                            Amount = amount,
-                            Date = DateTime.Now,
-                            CategoryId = categoryIdValue,
-                            Description = description,
-                            Type = category?.Type ?? TransactionType.Expense
-                        };
-
-                        _budgetService.AddTransaction(transaction);
-                        RemovePendingAction(chatId);
-
-                        string typeEmoji = transaction.Type == TransactionType.Income ? "💰" : "💸";
-                        await _bot.SendTextMessageAsync(chatId, $"{typeEmoji} Транзакция добавлена!");
-                    }
-                    else
-                    {
-                        await _bot.SendTextMessageAsync(chatId, "❌ Неверный формат. Пример: 1500 Покупка продуктов");
-                        await _bot.SendTextMessageAsync(
-                            chatId,
-                            $"Введите сумму и описание через пробел:"
-                        );
-                    }
-                    break;
+               
             }
         }
 
@@ -155,23 +97,6 @@ namespace FamilyBudgetBot.Bot.Handlers
             );
 
             _pendingActions[chatId] = ("SELECT_CATEGORY_TYPE", null);
-        }
-
-        private async Task ShowCategorySelection(long chatId)
-        {
-            var categories = _budgetService.GetAllCategories();
-            if (!categories.Any())
-            {
-                await _bot.SendTextMessageAsync(chatId, "ℹ️ Сначала добавьте категории через /addcategory");
-                return;
-            }
-
-            var message = "Выберите категорию:\n" +
-                          string.Join("\n", categories.Select(c => $"{c.Id}. {c.Name}")) +
-                          "\n\nВведите номер категории:";
-
-            await _bot.SendTextMessageAsync(chatId, message);
-            _pendingActions[chatId] = ("SELECT_CATEGORY", null);
         }
     }
 }

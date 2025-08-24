@@ -66,17 +66,17 @@ namespace FamilyBudgetBot.Bot.Handlers
 
 <b>Доступные категории:</b>";
 
-            if (incomeCategories.Any())
+            if (incomeCategories.Count != 0)
             {
                 menu += $"\n💰 <b>Доходы:</b> {string.Join(", ", incomeCategories.Select(c => c.Name))}";
             }
 
-            if (expenseCategories.Any())
+            if (expenseCategories.Count != 0)
             {
                 menu += $"\n💸 <b>Расходы:</b> {string.Join(", ", expenseCategories.Select(c => c.Name))}";
             }
 
-            if (savingCategories.Any())
+            if (savingCategories.Count != 0)
             {
                 menu += $"\n🏦 <b>Накопления:</b> {string.Join(", ", savingCategories.Select(c => c.Name))}";
             }
