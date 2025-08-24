@@ -1,23 +1,26 @@
-using System;
-
-namespace FamilyBudgetBot.Data.Models
+п»їnamespace FamilyBudgetBot.Data.Models
 {
     /// <summary>
-    /// Модель категории расходов/доходов
-    /// Представляет собой группу для объединения финансовых операций
+    /// РњРѕРґРµР»СЊ РєР°С‚РµРіРѕСЂРёРё СЂР°СЃС…РѕРґРѕРІ/РґРѕС…РѕРґРѕРІ
     /// </summary>
     public class Category
     {
-        /// <summary>
-        /// Уникальный идентификатор категории
-        /// Автоматически генерируется базой данных при добавлении
-        /// </summary>
         public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// Название категории (например, "Продукты", "Транспорт", "Развлечения")
-        /// Должно быть уникальным в системе
+        /// РўРёРї РѕРїРµСЂР°С†РёР№ РґР»СЏ СЌС‚РѕР№ РєР°С‚РµРіРѕСЂРёРё
         /// </summary>
-        public string Name { get; set; } = string.Empty;
+        public TransactionType Type { get; set; }
+
+        /// <summary>
+        /// Р¦РІРµС‚ РєР°С‚РµРіРѕСЂРёРё РґР»СЏ РІРёР·СѓР°Р»РёР·Р°С†РёРё (РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ)
+        /// </summary>
+        public string Color { get; set; } = "#3498db";
+
+        /// <summary>
+        /// РРєРѕРЅРєР° РєР°С‚РµРіРѕСЂРёРё (РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ)
+        /// </summary>
+        public string Icon { get; set; } = "рџ“Ѓ";
     }
 }

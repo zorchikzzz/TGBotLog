@@ -28,7 +28,10 @@ namespace FamilyBudgetBot.Services
         /// </summary>
         /// <param name="name">Название новой категории</param>
         /// <returns>ID добавленной категории</returns>
-        public int AddCategory(string name) => _repository.AddCategory(name);
+        public int AddCategory(string name, TransactionType type = TransactionType.Expense, string color = "#3498db", string icon = "📁")
+        {
+            return _repository.AddCategory(name, type, color, icon);
+        }
 
         /// <summary>
         /// Добавление новой транзакции
@@ -69,53 +72,76 @@ namespace FamilyBudgetBot.Services
         {
             try
             {
-                // Разделяем сообщение на части по пробелам
                 var parts = messageText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-                // Проверяем, что сообщение содержит как минимум сумму и категорию
                 if (parts.Length < 2)
-                    return (false, "Неверный формат. Пример: 1500 продукты покупки в магазине");
+                    return (false, "Неверный формат. Пример: +1500 зарплата аванс или -1500 продукты покупки");
 
-                // Пытаемся распарсить сумму из первой части сообщения
-                if (!decimal.TryParse(parts[0], NumberStyles.Any, CultureInfo.InvariantCulture, out decimal amount))
-                    return (false, "Не удалось распознать сумму. Пример: 1500 продукты покупки в магазине");
+                // Определяем тип транзакции по первому символу
+                TransactionType transactionType;
+                string amountString;
 
-                // Извлекаем название категории из второй части сообщения
+                if (parts[0].StartsWith("+"))
+                {
+                    transactionType = TransactionType.Income;
+                    amountString = parts[0].Substring(1);
+                }
+                else if (parts[0].StartsWith("-"))
+                {
+                    transactionType = TransactionType.Expense;
+                    amountString = parts[0].Substring(1);
+                }
+                else
+                {
+                    // По умолчанию считаем расходом
+                    transactionType = TransactionType.Expense;
+                    amountString = parts[0];
+                }
+
+                if (!decimal.TryParse(amountString, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal amount))
+                    return (false, "Не удалось распознать сумму. Пример: +1500 зарплата или -1500 продукты");
+
                 string categoryName = parts[1];
-
-                // Формируем описание из оставшихся частей сообщения (если они есть)
                 string description = parts.Length > 2 ? string.Join(" ", parts.Skip(2)) : "Без описания";
 
-                // Ищем категорию по имени в базе данных
                 var category = _repository.GetCategoryByName(categoryName);
-
-                // Если категория не найдена, возвращаем ошибку
                 if (category == null)
                 {
                     return (false, $"❌ Категория '{categoryName}' не найдена. " +
                                    "Сначала добавьте категорию с помощью команды /addcategory");
                 }
 
-                // Создаем объект транзакции с полученными данными
+                // Проверяем соответствие типа операции и типа категории
+                if (category.Type != transactionType)
+                {
+                    string typeName = transactionType == TransactionType.Income ? "доход" : "расход";
+                    string categoryTypeName = category.Type == TransactionType.Income ? "доходов" : "расходов";
+
+                    return (false, $"❌ Несоответствие типов. Вы пытаетесь добавить {typeName} в категорию {categoryTypeName}.");
+                }
+
                 var transaction = new Transaction
                 {
                     Amount = amount,
                     CategoryId = category.Id,
                     Date = DateTime.Now,
-                    Description = description
+                    Description = description,
+                    Type = transactionType
                 };
 
-                // Добавляем транзакцию в базу данных
                 _repository.AddTransaction(transaction);
 
-                // Возвращаем успешный результат с сообщением для пользователя
-                return (true, $"✅ Транзакция добавлена: {amount} руб. в категории '{categoryName}'");
+                string typeEmoji = transactionType == TransactionType.Income ? "💰" : "💸";
+                return (true, $"{typeEmoji} Транзакция добавлена: {(transactionType == TransactionType.Income ? "+" : "-")}{amount} руб. в категории '{categoryName}'");
             }
             catch (Exception ex)
             {
-                // В случае ошибки возвращаем сообщение об ошибке
                 return (false, $"Ошибка при обработке транзакции: {ex.Message}");
             }
+        }
+
+        public List<Category> GetCategoriesByType(TransactionType type)
+        {
+            return _repository.GetAllCategories().Where(c => c.Type == type).ToList();
         }
     }
 }
