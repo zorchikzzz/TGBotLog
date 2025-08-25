@@ -39,24 +39,58 @@ namespace FamilyBudgetBot.Bot.Handlers
                     await ShowHelp(chatId);
                     break;
 
+                case "/categories":
+                    await ShowExpenseCategories(chatId);
+                    break;
+
+                case "/incategories":
+                    await ShowIncomeCategories(chatId);
+                    break;
+
                 default:
                     await _bot.SendTextMessageAsync(chatId, "Неизвестная команда. Используйте /help для списка команд.");
                     break;
             }
         }
 
-        private async Task ShowMainMenu(long chatId)
+        private async Task ShowExpenseCategories(long chatId)
         {
             var expenseCategories = _budgetService.GetCategoriesByType(TransactionType.Expense);
-            var incomeCategories = _budgetService.GetCategoriesByType(TransactionType.Income);
-            var savingCategories = _budgetService.GetCategoriesByType(TransactionType.Saving);
 
+            string messegetext = "Категории РАСХОДОВ:\n" +
+                $"{string.Join("\n", expenseCategories.Select(c => c.Name))}" +
+                $"\n Чтобы посмотреть категроии ДОХОДОВ выполните команду: \n /incategories";
+
+
+            await _bot.SendTextMessageAsync(chatId, messegetext, parseMode: ParseMode.Html);
+
+        }
+
+        private async Task ShowIncomeCategories(long chatId)
+        {
+            var incomeCategories = _budgetService.GetCategoriesByType(TransactionType.Income);
+
+            string messegetext = "Категории Доходов:\n" +
+                $"{string.Join("\n", incomeCategories.Select(c => c.Name))}";
+
+
+            await _bot.SendTextMessageAsync(chatId, messegetext, parseMode: ParseMode.Html);
+
+        }
+
+
+
+
+        private async Task ShowMainMenu(long chatId)
+        {
+            
             var menu = @"📊 <b>Управление семейным бюджетом</b>
 
 Доступные команды:
 /addcategory - Добавить категорию
 /report - Показать отчет
 /help - Показать справку
+/categories - Показать существующие категории
 
 📝 <b>Добавление транзакций:</b>
 Отправьте сообщение в формате:
@@ -66,27 +100,7 @@ namespace FamilyBudgetBot.Bot.Handlers
 
 <b>Доступные категории:</b>";
 
-            if (incomeCategories.Count != 0)
-            {
-                menu += $"\n💰 <b>Доходы:</b> {string.Join(", ", incomeCategories.Select(c => c.Name))}";
-            }
-
-            if (expenseCategories.Count != 0)
-            {
-                menu += $"\n💸 <b>Расходы:</b> {string.Join(", ", expenseCategories.Select(c => c.Name))}";
-            }
-
-            if (savingCategories.Count != 0)
-            {
-                menu += $"\n🏦 <b>Накопления:</b> {string.Join(", ", savingCategories.Select(c => c.Name))}";
-            }
-
-            if (!incomeCategories.Any() && !expenseCategories.Any() && !savingCategories.Any())
-            {
-                menu += "\nКатегории пока не добавлены";
-            }
-
-            menu += "\n\n❗ <b>Важно:</b> Категория должна быть создана заранее с помощью команды /addcategory";
+            
 
             await _bot.SendTextMessageAsync(chatId, menu, parseMode: ParseMode.Html);
         }
@@ -124,7 +138,7 @@ namespace FamilyBudgetBot.Bot.Handlers
                 DateTime.Now
             );
 
-            if (!transactions.Any())
+            if (transactions.Count == 0)
             {
                 await _bot.SendTextMessageAsync(chatId, "📭 Нет данных за последний месяц");
                 return;
@@ -134,7 +148,6 @@ namespace FamilyBudgetBot.Bot.Handlers
 
             var incomeTransactions = transactions.Where(t => t.Type == TransactionType.Income);
             var expenseTransactions = transactions.Where(t => t.Type == TransactionType.Expense);
-            var savingTransactions = transactions.Where(t => t.Type == TransactionType.Saving);
 
             var incomeReport = incomeTransactions
                 .GroupBy(t => t.CategoryId)
@@ -152,23 +165,16 @@ namespace FamilyBudgetBot.Bot.Handlers
                 })
                 .OrderByDescending(r => r.Total);
 
-            var savingReport = savingTransactions
-                .GroupBy(t => t.CategoryId)
-                .Select(g => {
-                    var category = categories.FirstOrDefault(c => c.Id == g.Key)?.Name ?? "Неизвестная";
-                    return new { Category = category, Total = g.Sum(t => t.Amount) };
-                })
-                .OrderByDescending(r => r.Total);
+            
 
             var totalIncome = incomeReport.Sum(r => r.Total);
             var totalExpense = expenseReport.Sum(r => r.Total);
-            var totalSaving = savingReport.Sum(r => r.Total);
-            var balance = totalIncome - totalExpense - totalSaving;
+            
+            var balance = totalIncome - totalExpense;
 
             var message = $"📈 <b>Отчет за последний месяц</b>\n\n" +
                           $"💰 <b>Доходы:</b> {totalIncome:C}\n" +
                           $"💸 <b>Расходы:</b> {totalExpense:C}\n" +
-                          $"🏦 <b>Накопления:</b> {totalSaving:C}\n" +
                           $"📊 <b>Баланс:</b> {balance:C}\n\n";
 
             if (incomeReport.Any())
@@ -181,12 +187,6 @@ namespace FamilyBudgetBot.Bot.Handlers
             {
                 message += "<b>Расходы по категориям:</b>\n" +
                            string.Join("\n", expenseReport.Select(r => $"- {r.Category}: {r.Total:C}")) + "\n\n";
-            }
-
-            if (savingReport.Any())
-            {
-                message += "<b>Накопления по категориям:</b>\n" +
-                           string.Join("\n", savingReport.Select(r => $"- {r.Category}: {r.Total:C}"));
             }
 
             await _bot.SendTextMessageAsync(chatId, message, parseMode: ParseMode.Html);

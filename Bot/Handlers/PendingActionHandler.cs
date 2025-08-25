@@ -69,11 +69,9 @@ namespace FamilyBudgetBot.Bot.Handlers
                 case "/income":
                     selectedType = TransactionType.Income;
                     break;
-                case "/saving":
-                    selectedType = TransactionType.Saving;
-                    break;
+                
                 default:
-                    await _bot.SendTextMessageAsync(chatId, "Неверный тип категории. Используйте /expense, /income или /saving");
+                    await _bot.SendTextMessageAsync(chatId, "Неверный тип категории");
                     await ShowCategoryTypeSelection(chatId);
                     return;
             }
@@ -87,8 +85,7 @@ namespace FamilyBudgetBot.Bot.Handlers
             var typeMenu = @"📁 <b>Выберите тип категории:</b>
 
 /expense - Категория расходов 💸
-/income - Категория доходов 💰
-/saving - Категория накоплений 🏦";
+/income - Категория доходов 💰;";
 
             await _bot.SendTextMessageAsync(
                 chatId,

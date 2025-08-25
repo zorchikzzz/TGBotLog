@@ -4,30 +4,21 @@ using System.Globalization;
 
 namespace FamilyBudgetBot.Services
 {
-    /// <summary>
     /// Сервис для работы с бизнес-логикой приложения
     /// Содержит основную логику обработки данных между репозиторием и контроллерами
-    /// </summary>
     public class BudgetService
     {
         // Репозиторий для работы с базой данных
         private readonly BudgetRepository _repository;
 
-        /// <summary>
         /// Конструктор сервиса
-        /// </summary>
-        /// <param name="repository">Экземпляр репозитория для работы с данными</param>
         public BudgetService(BudgetRepository repository)
         {
             // Сохраняем переданный репозиторий для использования в методах сервиса
             _repository = repository;
         }
 
-        /// <summary>
         /// Добавление новой категории
-        /// </summary>
-        /// <param name="name">Название новой категории</param>
-        /// <returns>ID добавленной категории</returns>
         public int AddCategory(string name, TransactionType type = TransactionType.Expense, string color = "#3498db", string icon = "📁")
         {
             return _repository.AddCategory(name, type, color, icon);
