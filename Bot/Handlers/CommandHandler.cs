@@ -70,7 +70,7 @@ namespace FamilyBudgetBot.Bot.Handlers
         {
             var incomeCategories = _budgetService.GetCategoriesByType(TransactionType.Income);
 
-            string messegetext = "Категории Доходов:\n" +
+            string messegetext = "Категории ДОХОДОВ:\n" +
                 $"{string.Join("\n", incomeCategories.Select(c => c.Name))}";
 
 
