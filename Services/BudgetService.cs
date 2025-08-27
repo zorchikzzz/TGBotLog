@@ -95,5 +95,10 @@ namespace FamilyBudgetBot.Services
         {
             return _repository.GetAllCategories().Where(c => c.Type == type).ToList();
         }
+
+        public void CloseConnection()
+        {
+            _repository.Dispose();
+        }
     }
 }

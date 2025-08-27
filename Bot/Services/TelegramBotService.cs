@@ -69,21 +69,19 @@ namespace FamilyBudgetBot.Bot.Services
                 if (message.Text is not { } messageText)
                     return;
 
-                // Обработка ожидающих действий
+                // Сначала проверяем ожидающие действия
                 if (_pendingActionHandler.HasPendingAction(chatId))
                 {
                     await _pendingActionHandler.HandlePendingAction(chatId, messageText);
                     return;
                 }
 
-                // Обработка команд
+                // Затем обрабатываем команды
                 if (messageText.StartsWith('/'))
                 {
                     await _commandHandler.HandleCommand(chatId, messageText);
                     return;
                 }
-
-              
 
                 // Обработка транзакций
                 var result = _budgetService.ProcessTransactionMessage(messageText);

@@ -6,18 +6,26 @@ namespace FamilyBudgetBot.Data.Repositories
 {
     public class BudgetRepository : IDisposable
     {
-        private readonly SqliteConnection _connection;
+        private readonly string _connectionString;
+        private SqliteConnection _connection;
 
         public BudgetRepository(string dbPath = "budget.db")
         {
-            _connection = new SqliteConnection($"Data Source={dbPath}");
-            _connection.Open();
+            _connectionString = $"Data Source={dbPath};Pooling=False;";
             InitializeDatabase();
+        }
+
+        private SqliteConnection GetOpenConnection()
+        {
+            var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            return connection;
         }
 
         private void InitializeDatabase()
         {
-            using var cmd = _connection.CreateCommand();
+            using var connection = GetOpenConnection();
+            using var cmd = connection.CreateCommand();
 
             cmd.CommandText = @"
             CREATE TABLE IF NOT EXISTS Categories (
@@ -43,7 +51,8 @@ namespace FamilyBudgetBot.Data.Repositories
 
         public int AddCategory(string name, TransactionType type = TransactionType.Expense, string color = "#3498db", string icon = "📁")
         {
-            using var cmd = _connection.CreateCommand();
+            using var connection = GetOpenConnection();
+            using var cmd = connection.CreateCommand();
             cmd.CommandText = "INSERT INTO Categories (Name, Type, Color, Icon) VALUES ($name, $type, $color, $icon)";
             cmd.Parameters.AddWithValue("$name", name);
             cmd.Parameters.AddWithValue("$type", (int)type);
@@ -57,7 +66,8 @@ namespace FamilyBudgetBot.Data.Repositories
 
         public int AddTransaction(Transaction transaction)
         {
-            using var cmd = _connection.CreateCommand();
+            using var connection = GetOpenConnection();
+            using var cmd = connection.CreateCommand();
             cmd.CommandText = @"
             INSERT INTO Transactions (Amount, Date, CategoryId, Description) 
             VALUES ($amount, $date, $categoryId, $description)";
@@ -76,7 +86,8 @@ namespace FamilyBudgetBot.Data.Repositories
         public List<Category> GetAllCategories()
         {
             var categories = new List<Category>();
-            using var cmd = _connection.CreateCommand();
+            using var connection = GetOpenConnection();
+            using var cmd = connection.CreateCommand();
             cmd.CommandText = "SELECT Id, Name, Type, Color, Icon FROM Categories";
 
             using var reader = cmd.ExecuteReader();
@@ -96,7 +107,8 @@ namespace FamilyBudgetBot.Data.Repositories
 
         public Category? GetCategoryByName(string name)
         {
-            using var cmd = _connection.CreateCommand();
+            using var connection = GetOpenConnection();
+            using var cmd = connection.CreateCommand();
             cmd.CommandText = "SELECT Id, Name, Type, Color, Icon FROM Categories WHERE Name = $name";
             cmd.Parameters.AddWithValue("$name", name);
 
@@ -115,14 +127,10 @@ namespace FamilyBudgetBot.Data.Repositories
             return null;
         }
 
-        /// <summary>
-        /// Получение категории по ID
-        /// </summary>
-        /// <param name="id">ID категории для поиска</param>
-        /// <returns>Найденная категория или null, если категория не найдена</returns>
         public Category? GetCategoryById(int id)
         {
-            using var cmd = _connection.CreateCommand();
+            using var connection = GetOpenConnection();
+            using var cmd = connection.CreateCommand();
             cmd.CommandText = "SELECT Id, Name, Type, Color, Icon FROM Categories WHERE Id = $id";
             cmd.Parameters.AddWithValue("$id", id);
 
@@ -144,7 +152,8 @@ namespace FamilyBudgetBot.Data.Repositories
         public List<Transaction> GetTransactions(DateTime? startDate = null, DateTime? endDate = null)
         {
             var transactions = new List<Transaction>();
-            using var cmd = _connection.CreateCommand();
+            using var connection = GetOpenConnection();
+            using var cmd = connection.CreateCommand();
 
             cmd.CommandText = @"
             SELECT t.Id, t.Amount, t.Date, t.CategoryId, t.Description 
@@ -166,7 +175,6 @@ namespace FamilyBudgetBot.Data.Repositories
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
-                // Получаем категорию для определения типа транзакции
                 var category = GetCategoryById(reader.GetInt32(3));
 
                 transactions.Add(new Transaction
@@ -186,6 +194,11 @@ namespace FamilyBudgetBot.Data.Repositories
         {
             _connection?.Close();
             _connection?.Dispose();
+        }
+
+        public void CloseAllConnections()
+        {
+            // Этот метод можно оставить пустым, так как мы теперь используем пул соединений
         }
     }
 }

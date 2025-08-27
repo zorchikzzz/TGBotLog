@@ -2,6 +2,7 @@
 using System.IO;
 using FamilyBudgetBot.Data.Models;
 using FamilyBudgetBot.Services;
+using Microsoft.Data.Sqlite;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -129,7 +130,7 @@ namespace FamilyBudgetBot.Bot.Handlers
 <code>1500 продукты</code> - по умолчанию расход
 
 <b>Типы категорий:</b>
-/expense - Категория расходов ( траты)
+/expense - Категория расходов (траты)
 /income - Категория доходов (поступления)
 
 ❗ <b>Важно:</b> Категория должна быть создана заранее с помощью команды /addcategory";
@@ -201,11 +202,10 @@ namespace FamilyBudgetBot.Bot.Handlers
             try
             {
                 // Закрываем все соединения с БД
-                //_budgetService.Dispose(); // Если BudgetService реализует IDisposable
+                _budgetService.CloseConnection();
 
-                // Альтернативный подход: принудительно вызываем сборщик мусора
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
+                // Даем время на освобождение файла
+                await Task.Delay(1000);
 
                 if (!System.IO.File.Exists(_dbPath))
                 {
@@ -217,12 +217,14 @@ namespace FamilyBudgetBot.Bot.Handlers
                 var tempBackupPath = Path.GetTempFileName();
                 System.IO.File.Copy(_dbPath, tempBackupPath, true);
 
-                await using var stream = System.IO.File.OpenRead(tempBackupPath);
-                await _bot.SendDocumentAsync(
-                    chatId: chatId,
-                    document: new InputOnlineFile(stream, "budget_backup.db"),
-                    caption: "💾 Резервная копия базы данных"
-                );
+                await using (var stream = System.IO.File.OpenRead(tempBackupPath))
+                {
+                    await _bot.SendDocumentAsync(
+                        chatId: chatId,
+                        document: new InputOnlineFile(stream, "budget_backup.db"),
+                        caption: "💾 Резервная копия базы данных"
+                    );
+                }
 
                 // Удаляем временный файл
                 System.IO.File.Delete(tempBackupPath);
@@ -253,9 +255,7 @@ namespace FamilyBudgetBot.Bot.Handlers
                 {
                     System.IO.File.Copy(_dbPath, tempBackupPath, true);
                 }
-               
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
+
                 // Скачиваем и сохраняем новую БД
                 await using (var saveStream = System.IO.File.OpenWrite(_dbPath))
                 {
