@@ -5,6 +5,11 @@
 
 # User-specific files
 
+appsettings.json
+docker-compose.yml
+Dockerfile
+.dockerignore
+
 *.rsuser
 *.suo
 *.user
