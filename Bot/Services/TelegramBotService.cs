@@ -1,4 +1,4 @@
-using Telegram.Bot;
+﻿using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -14,13 +14,15 @@ namespace FamilyBudgetBot.Bot.Services
         private readonly BudgetService _budgetService;
         private readonly CommandHandler _commandHandler;
         private readonly PendingActionHandler _pendingActionHandler;
+        private readonly CancellationTokenSource _cancellationTokenSource;
 
-        public TelegramBotService(string token, BudgetService budgetService)
+        public TelegramBotService(string botToken, BudgetService budgetService, string dbPath)
         {
-            _bot = new TelegramBotClient(token);
+            _bot = new TelegramBotClient(botToken);
             _budgetService = budgetService;
             _pendingActionHandler = new PendingActionHandler(_bot, _budgetService);
-            _commandHandler = new CommandHandler(_bot, _budgetService, _pendingActionHandler);
+            _commandHandler = new CommandHandler(_bot, _budgetService, _pendingActionHandler, dbPath);
+            _cancellationTokenSource = new CancellationTokenSource();
         }
 
         public void Start()
@@ -33,55 +35,74 @@ namespace FamilyBudgetBot.Bot.Services
             _bot.StartReceiving(
                 updateHandler: HandleUpdateAsync,
                 pollingErrorHandler: HandlePollingErrorAsync,
-                receiverOptions: receiverOptions
+                receiverOptions: receiverOptions,
+                cancellationToken: _cancellationTokenSource.Token
             );
-
-            Console.WriteLine("��� �������...");
         }
 
-        private async Task HandleUpdateAsync(ITelegramBotClient bot, Update update, CancellationToken cancellationToken)
+        public void Stop()
         {
-            if (update.Type != UpdateType.Message || update.Message!.Type != MessageType.Text)
+            _cancellationTokenSource.Cancel();
+        }
+
+        private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
+        {
+            if (update.Message is not { } message)
                 return;
 
-            var message = update.Message;
             var chatId = message.Chat.Id;
-            var text = message.Text!;
 
             try
             {
-                // ������������ ������� ������ ���� ��������� � ������ �������
-                if (text.StartsWith("/expense") || text.StartsWith("/income") || text.StartsWith("/saving"))
+                // Обработка документов (для восстановления БД)
+                if (message.Document != null)
                 {
-                    if (_pendingActionHandler.HasPendingAction(chatId))
+                    var pendingAction = _pendingActionHandler.GetPendingAction(chatId);
+                    if (pendingAction.Action == "WAITING_RESTORE_FILE")
                     {
-                        await _pendingActionHandler.HandlePendingAction(chatId, text);
+                        await _commandHandler.HandleDatabaseRestore(chatId, message.Document);
                         return;
                     }
                 }
 
+                // Обработка текстовых сообщений
+                if (message.Text is not { } messageText)
+                    return;
+
+                // Обработка ожидающих действий
                 if (_pendingActionHandler.HasPendingAction(chatId))
                 {
-                    await _pendingActionHandler.HandlePendingAction(chatId, text);
+                    await _pendingActionHandler.HandlePendingAction(chatId, messageText);
                     return;
                 }
 
-                if (text.StartsWith("/"))
+                // Обработка команд
+                if (messageText.StartsWith('/'))
                 {
-                    await _commandHandler.HandleCommand(chatId, text);
+                    await _commandHandler.HandleCommand(chatId, messageText);
                     return;
                 }
 
-                var result = _budgetService.ProcessTransactionMessage(text);
-                await bot.SendTextMessageAsync(chatId, result.Message);
+              
+
+                // Обработка транзакций
+                var result = _budgetService.ProcessTransactionMessage(messageText);
+                await botClient.SendTextMessageAsync(
+                    chatId: chatId,
+                    text: result.Message,
+                    parseMode: ParseMode.Html,
+                    cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {
-                await bot.SendTextMessageAsync(chatId, $"������: {ex.Message}");
+                await botClient.SendTextMessageAsync(
+                    chatId: chatId,
+                    text: $"❌ Произошла ошибка: {ex.Message}",
+                    cancellationToken: cancellationToken);
             }
         }
 
-        private Task HandlePollingErrorAsync(ITelegramBotClient bot, Exception exception, CancellationToken cancellationToken)
+        private Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
             var errorMessage = exception switch
             {

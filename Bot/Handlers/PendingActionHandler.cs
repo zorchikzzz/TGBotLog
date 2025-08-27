@@ -20,6 +20,13 @@ namespace FamilyBudgetBot.Bot.Handlers
 
         public bool HasPendingAction(long chatId) => _pendingActions.ContainsKey(chatId);
 
+        public (string Action, int? CategoryId) GetPendingAction(long chatId)
+        {
+            if (_pendingActions.TryGetValue(chatId, out var pending))
+                return pending;
+            return (null, null);
+        }
+
         public void SetPendingAction(long chatId, string action, int? categoryId = null)
         {
             _pendingActions[chatId] = (action, categoryId);
@@ -42,6 +49,7 @@ namespace FamilyBudgetBot.Bot.Handlers
             {
                 case "SELECT_CATEGORY_TYPE":
                     await HandleCategoryTypeSelection(chatId, text);
+
                     break;
 
                 case "ADD_CATEGORY":
@@ -53,7 +61,6 @@ namespace FamilyBudgetBot.Bot.Handlers
                                      categoryType == TransactionType.Expense ? "расходов" : "накоплений";
                     await _bot.SendTextMessageAsync(chatId, $"✅ Категория {typeName} '{text}' добавлена!");
                     break;
-               
             }
         }
 
@@ -69,7 +76,7 @@ namespace FamilyBudgetBot.Bot.Handlers
                 case "/income":
                     selectedType = TransactionType.Income;
                     break;
-                
+
                 default:
                     await _bot.SendTextMessageAsync(chatId, "Неверный тип категории");
                     await ShowCategoryTypeSelection(chatId);
@@ -85,7 +92,7 @@ namespace FamilyBudgetBot.Bot.Handlers
             var typeMenu = @"📁 <b>Выберите тип категории:</b>
 
 /expense - Категория расходов 💸
-/income - Категория доходов 💰;";
+/income - Категория доходов 💰";
 
             await _bot.SendTextMessageAsync(
                 chatId,

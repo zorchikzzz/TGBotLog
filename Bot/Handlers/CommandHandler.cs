@@ -1,8 +1,11 @@
-﻿using Telegram.Bot;
-using Telegram.Bot.Types.Enums;
-using FamilyBudgetBot.Services;
+﻿using System.Globalization;
+using System.IO;
 using FamilyBudgetBot.Data.Models;
-using System.Globalization;
+using FamilyBudgetBot.Services;
+using Telegram.Bot;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InputFiles;
 
 namespace FamilyBudgetBot.Bot.Handlers
 {
@@ -11,12 +14,14 @@ namespace FamilyBudgetBot.Bot.Handlers
         private readonly ITelegramBotClient _bot;
         private readonly BudgetService _budgetService;
         private readonly PendingActionHandler _pendingActionHandler;
+        private readonly string _dbPath;
 
-        public CommandHandler(ITelegramBotClient bot, BudgetService budgetService, PendingActionHandler pendingActionHandler)
+        public CommandHandler(ITelegramBotClient bot, BudgetService budgetService, PendingActionHandler pendingActionHandler, string dbPath)
         {
             _bot = bot;
             _budgetService = budgetService;
             _pendingActionHandler = pendingActionHandler;
+            _dbPath = dbPath;
         }
 
         public async Task HandleCommand(long chatId, string command)
@@ -47,6 +52,14 @@ namespace FamilyBudgetBot.Bot.Handlers
                     await ShowIncomeCategories(chatId);
                     break;
 
+                case "/backup":
+                    await SendDatabaseBackup(chatId);
+                    break;
+
+                case "/restore":
+                    await RequestDatabaseRestore(chatId);
+                    break;
+
                 default:
                     await _bot.SendTextMessageAsync(chatId, "Неизвестная команда. Используйте /help для списка команд.");
                     break;
@@ -61,9 +74,7 @@ namespace FamilyBudgetBot.Bot.Handlers
                 $"{string.Join("\n", expenseCategories.Select(c => c.Name))}" +
                 $"\n Чтобы посмотреть категроии ДОХОДОВ выполните команду: \n /incategories";
 
-
             await _bot.SendTextMessageAsync(chatId, messegetext, parseMode: ParseMode.Html);
-
         }
 
         private async Task ShowIncomeCategories(long chatId)
@@ -73,17 +84,11 @@ namespace FamilyBudgetBot.Bot.Handlers
             string messegetext = "Категории ДОХОДОВ:\n" +
                 $"{string.Join("\n", incomeCategories.Select(c => c.Name))}";
 
-
             await _bot.SendTextMessageAsync(chatId, messegetext, parseMode: ParseMode.Html);
-
         }
-
-
-
 
         private async Task ShowMainMenu(long chatId)
         {
-            
             var menu = @"📊 <b>Управление семейным бюджетом</b>
 
 Доступные команды:
@@ -91,6 +96,8 @@ namespace FamilyBudgetBot.Bot.Handlers
 /report - Показать отчет
 /help - Показать справку
 /categories - Показать существующие категории
+/backup - Скачать резервную копию базы данных
+/restore - Восстановить базу данных из резервной копии
 
 📝 <b>Добавление транзакций:</b>
 Отправьте сообщение в формате:
@@ -99,8 +106,6 @@ namespace FamilyBudgetBot.Bot.Handlers
 <code>1500 продукты</code> - расход по умолчанию
 
 <b>Доступные категории:</b>";
-
-            
 
             await _bot.SendTextMessageAsync(chatId, menu, parseMode: ParseMode.Html);
         }
@@ -113,6 +118,8 @@ namespace FamilyBudgetBot.Bot.Handlers
 /start - Главное меню
 /addcategory - Добавить новую категорию
 /report - Показать отчет за последний месяц
+/backup - Скачать резервную копию базы данных
+/restore - Восстановить базу данных из резервной копии
 /help - Эта справка
 
 <b>Добавление транзакций:</b>
@@ -122,9 +129,8 @@ namespace FamilyBudgetBot.Bot.Handlers
 <code>1500 продукты</code> - по умолчанию расход
 
 <b>Типы категорий:</b>
-/expense - Категория расходов (траты)
+/expense - Категория расходов ( траты)
 /income - Категория доходов (поступления)
-/saving - Категория накоплений (сбережения)
 
 ❗ <b>Важно:</b> Категория должна быть создана заранее с помощью команды /addcategory";
 
@@ -165,11 +171,9 @@ namespace FamilyBudgetBot.Bot.Handlers
                 })
                 .OrderByDescending(r => r.Total);
 
-            
-
             var totalIncome = incomeReport.Sum(r => r.Total);
             var totalExpense = expenseReport.Sum(r => r.Total);
-            
+
             var balance = totalIncome - totalExpense;
 
             var message = $"📈 <b>Отчет за последний месяц</b>\n\n" +
@@ -190,6 +194,97 @@ namespace FamilyBudgetBot.Bot.Handlers
             }
 
             await _bot.SendTextMessageAsync(chatId, message, parseMode: ParseMode.Html);
+        }
+
+        private async Task SendDatabaseBackup(long chatId)
+        {
+            try
+            {
+                // Закрываем все соединения с БД
+                //_budgetService.Dispose(); // Если BudgetService реализует IDisposable
+
+                // Альтернативный подход: принудительно вызываем сборщик мусора
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+
+                if (!System.IO.File.Exists(_dbPath))
+                {
+                    await _bot.SendTextMessageAsync(chatId, "❌ Файл базы данных не найден");
+                    return;
+                }
+
+                // Создаем временную копию файла
+                var tempBackupPath = Path.GetTempFileName();
+                System.IO.File.Copy(_dbPath, tempBackupPath, true);
+
+                await using var stream = System.IO.File.OpenRead(tempBackupPath);
+                await _bot.SendDocumentAsync(
+                    chatId: chatId,
+                    document: new InputOnlineFile(stream, "budget_backup.db"),
+                    caption: "💾 Резервная копия базы данных"
+                );
+
+                // Удаляем временный файл
+                System.IO.File.Delete(tempBackupPath);
+            }
+            catch (Exception ex)
+            {
+                await _bot.SendTextMessageAsync(chatId, $"❌ Ошибка при создании бэкапа: {ex.Message}");
+            }
+        }
+
+        private async Task RequestDatabaseRestore(long chatId)
+        {
+            await _bot.SendTextMessageAsync(chatId,
+                "📤 Отправьте файл базы данных для восстановления. Внимание: это перезапишет текущую базу данных!");
+
+            _pendingActionHandler.SetPendingAction(chatId, "WAITING_RESTORE_FILE", null);
+        }
+
+        public async Task HandleDatabaseRestore(long chatId, Document document)
+        {
+            try
+            {
+                var file = await _bot.GetFileAsync(document.FileId);
+
+                // Создаем временную копию текущей БД на случай ошибки
+                var tempBackupPath = _dbPath + ".backup";
+                if (System.IO.File.Exists(_dbPath))
+                {
+                    System.IO.File.Copy(_dbPath, tempBackupPath, true);
+                }
+               
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                // Скачиваем и сохраняем новую БД
+                await using (var saveStream = System.IO.File.OpenWrite(_dbPath))
+                {
+                    await _bot.DownloadFileAsync(file.FilePath, saveStream);
+                }
+
+                await _bot.SendTextMessageAsync(chatId,
+                    "✅ База данных успешно восстановлена! Бот будет перезапущен.");
+
+                // Перезапускаем приложение
+                await Task.Delay(1000);
+                Environment.Exit(0);
+            }
+            catch (Exception ex)
+            {
+                // Восстанавливаем из бекапа в случае ошибки
+                if (System.IO.File.Exists(_dbPath + ".backup"))
+                {
+                    System.IO.File.Copy(_dbPath + ".backup", _dbPath, true);
+                    System.IO.File.Delete(_dbPath + ".backup");
+                }
+
+                await _bot.SendTextMessageAsync(chatId,
+                    $"❌ Ошибка при восстановлении базы данных: {ex.Message}");
+            }
+            finally
+            {
+                _pendingActionHandler.RemovePendingAction(chatId);
+            }
         }
     }
 }

@@ -33,7 +33,7 @@ class Program
                 return;
             }
 
-            var botService = new TelegramBotService(botToken, budgetService);
+            var botService = new TelegramBotService(botToken, budgetService, dbPath);
             botService.Start();
 
             Console.WriteLine("Приложение для управления бюджетом запущено успешно...");
