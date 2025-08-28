@@ -25,9 +25,9 @@ class Program
 
             var botToken = configuration["BotConfiguration:BotToken"];
 
-            if (string.IsNullOrEmpty(botToken))
+            if (string.IsNullOrEmpty(botToken) || botToken.Length != 46)
             {
-                Console.WriteLine("Токен бота не найден в конфигурации.");
+                Console.WriteLine("Токен бота не найден в конфигурации или имеет неверный формат");
                 Console.WriteLine("Нажмите Enter для выхода.");
                 Console.ReadLine();
                 return;
