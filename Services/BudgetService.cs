@@ -56,7 +56,7 @@ namespace FamilyBudgetBot.Services
                 if (amount <= 0)
                     return (false, "Сумма должна быть положительной во избежание ошибок, если необходимо добавить доход или расход то укажите категорию соответсвующего типа");
 
-                string categoryName = parts[1];
+                string categoryName = parts[1].ToUpper();
                 string description = parts.Length > 2 ? string.Join(" ", parts.Skip(2)) : "Без описания";
 
                 var category = _repository.GetCategoryByName(categoryName);

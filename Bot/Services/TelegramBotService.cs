@@ -16,6 +16,7 @@ namespace FamilyBudgetBot.Bot.Services
         private readonly PendingActionHandler _pendingActionHandler;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly BackupHandler _backupHandler;
+        private readonly SqlQueryHandler _sqlQueryHandler;
 
         public TelegramBotService(string botToken, BudgetService budgetService, string dbPath)
         {
@@ -25,7 +26,8 @@ namespace FamilyBudgetBot.Bot.Services
             _backupHandler = new BackupHandler(_bot, _budgetService, _pendingActionHandler, dbPath);
             _commandHandler = new CommandHandler(_bot, _budgetService, _pendingActionHandler, _backupHandler, dbPath);
             _cancellationTokenSource = new CancellationTokenSource();
-            
+            _sqlQueryHandler = new SqlQueryHandler(_bot, dbPath);
+
         }
 
         public void Start()
@@ -83,6 +85,13 @@ namespace FamilyBudgetBot.Bot.Services
                 if (messageText.StartsWith('/'))
                 {
                     await _commandHandler.HandleCommand(chatId, messageText);
+                    return;
+                }
+
+                // ПРОСТАЯ ПРОВЕРКА: если сообщение начинается с SELECT
+                if (messageText.Trim().ToUpper().StartsWith("SELECT"))
+                {
+                    await _sqlQueryHandler.HandleSqlQuery(chatId, messageText);
                     return;
                 }
 
