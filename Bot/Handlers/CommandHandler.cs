@@ -30,6 +30,12 @@ namespace FamilyBudgetBot.Bot.Handlers
 
         public async Task HandleCommand(long chatId, string command)
         {
+
+            if (command.Contains('@'))
+            {
+                command = command.Split('@')[0];
+            }
+
             switch (command.ToLower())
             {
                 case "/start":
