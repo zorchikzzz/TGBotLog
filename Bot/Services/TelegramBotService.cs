@@ -15,14 +15,17 @@ namespace FamilyBudgetBot.Bot.Services
         private readonly CommandHandler _commandHandler;
         private readonly PendingActionHandler _pendingActionHandler;
         private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly BackupHandler _backupHandler;
 
         public TelegramBotService(string botToken, BudgetService budgetService, string dbPath)
         {
             _bot = new TelegramBotClient(botToken);
             _budgetService = budgetService;
             _pendingActionHandler = new PendingActionHandler(_bot, _budgetService);
-            _commandHandler = new CommandHandler(_bot, _budgetService, _pendingActionHandler, dbPath);
+            _backupHandler = new BackupHandler(_bot, _budgetService, _pendingActionHandler, dbPath);
+            _commandHandler = new CommandHandler(_bot, _budgetService, _pendingActionHandler, _backupHandler, dbPath);
             _cancellationTokenSource = new CancellationTokenSource();
+            
         }
 
         public void Start()
@@ -60,7 +63,7 @@ namespace FamilyBudgetBot.Bot.Services
                     var pendingAction = _pendingActionHandler.GetPendingAction(chatId);
                     if (pendingAction.Action == "WAITING_RESTORE_FILE")
                     {
-                        await _commandHandler.HandleDatabaseRestore(chatId, message.Document);
+                        await _backupHandler.HandleDatabaseRestore(chatId, message.Document);
                         return;
                     }
                 }
