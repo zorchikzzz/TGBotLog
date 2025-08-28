@@ -7,7 +7,6 @@ namespace FamilyBudgetBot.Data.Repositories
     public class BudgetRepository : IDisposable
     {
         private readonly string _connectionString;
-        private SqliteConnection _connection;
 
         public BudgetRepository(string dbPath = "budget.db")
         {
@@ -192,13 +191,8 @@ namespace FamilyBudgetBot.Data.Repositories
 
         public void Dispose()
         {
-            _connection?.Close();
-            _connection?.Dispose();
+          
         }
-
-        public void CloseAllConnections()
-        {
-            // Этот метод можно оставить пустым, так как мы теперь используем пул соединений
-        }
+       
     }
 }
