@@ -6,7 +6,6 @@
 # User-specific files
 
 appsettings.json
-docker-compose.yml
 .dockerignore
 
 *.rsuser

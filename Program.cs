@@ -19,7 +19,16 @@ class Program
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .Build();
 
-            var dbPath = configuration["Database:Path"] ?? "budget.db";
+            // Используем путь к базе данных в директории приложения
+            var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "data", "budget.db");
+
+            // Создаем директорию data, если она не существует
+            var dataDir = Path.GetDirectoryName(dbPath);
+            if (!Directory.Exists(dataDir))
+            {
+                Directory.CreateDirectory(dataDir);
+            }
+
             var repository = new BudgetRepository(dbPath);
             var budgetService = new BudgetService(repository);
 

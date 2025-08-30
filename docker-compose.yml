@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  telegram-bot-1:
+    image: zorovr/tgbotlog-family-budget-bot:latest
+    container_name: telegram-bot-1
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    volumes:
+      - ./appsettings.json:/app/appsettings.json:ro
+      - bot-1-data:/app/data  # Монтируем том в директорию приложения
+    networks:
+      - bot-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  telegram-bot-2:
+    image: zorovr/tgbotlog-family-budget-bot:latest
+    container_name: telegram-bot-2
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    volumes:
+      - ./appsettings2.json:/app/appsettings.json:ro
+      - bot-2-data:/app/data  # Монтируем том в директорию приложения
+    networks:
+      - bot-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 31 --cleanup --label-enable
+    networks:
+      - bot-network
+    restart: unless-stopped
+
+volumes:
+  bot-1-data:
+  bot-2-data:
+
+networks:
+  bot-network:
+    driver: bridge
