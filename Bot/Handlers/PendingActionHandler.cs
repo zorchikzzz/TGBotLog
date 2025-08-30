@@ -54,7 +54,7 @@ namespace FamilyBudgetBot.Bot.Handlers
 
                 case "ADD_CATEGORY":
                     TransactionType categoryType = (TransactionType)(pending.CategoryId ?? 0);
-                    _budgetService.AddCategory(text, categoryType);
+                    _budgetService.AddCategory(text.ToUpper(), categoryType);
                     RemovePendingAction(chatId);
 
                     string typeName = categoryType == TransactionType.Income ? "доходов" :
