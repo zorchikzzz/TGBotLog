@@ -5,8 +5,8 @@
 
 # User-specific files
 
-appsettings.json
-.dockerignore
+*.json
+
 
 *.rsuser
 *.suo

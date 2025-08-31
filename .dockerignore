@@ -1,0 +1,4 @@
+update-docker.bat
+update-docker.ps1
+docker-compose.yml
+Dockerfile
