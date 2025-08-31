@@ -1,12 +1,16 @@
 # Скрипт для автоматической сборки и обновления Docker образа
 # Запускается двойным кликом в Windows
 
-# Параметры
-$projectPath = "C:\TGBotLog\TGBotLog\TGBotLog.csproj"  # Полный путь к .csproj файлу
-$solutionPath = "C:\TGBotLog\TGBotLog\TGBotLog.sln"  # Путь к решению (если есть)
-$publishPath = "C:\DockerApps\BotsinServer\app"
+# Определяем директорию скрипта
+$scriptPath = $MyInvocation.MyCommand.Path
+$scriptDir = Split-Path -Parent $scriptPath
+
+# Параметры (абсолютные пути от расположения скрипта)
+$projectPath = Join-Path $scriptDir "TGBotLog.csproj"
+$solutionPath = Join-Path $scriptDir "TGBotLog.sln"
+$publishPath = "C:\DockerApps\BotsinServer"
 $imageName = "zorovr/tgbotlog-family-budget-bot:latest"
-$dockerfilePath = "C:\TGBotLog\TGBotLog\Dockerfile"  # Путь к Dockerfile
+$dockerfilePath = Join-Path $scriptDir "Dockerfile"
 
 # Функция для вывода сообщений с цветом
 function Write-ColorOutput {
@@ -47,8 +51,7 @@ try {
     # 2. Публикация .NET приложения
     Write-ColorOutput "Публикация .NET приложения..." "Yellow"
     
-    # Публикуем из папки решения, чтобы избежать предупреждений
-    Set-Location (Split-Path $solutionPath -Parent)
+    # Публикуем из директории скрипта
     dotnet publish $solutionPath -c Release -o $publishPath --self-contained false
     
     if ($LASTEXITCODE -eq 0) {
@@ -63,8 +66,12 @@ try {
     
     # 4. Сборка Docker образа
     Write-ColorOutput "Сборка Docker образа..." "Yellow"
+    # Сохраняем текущую директорию
+    $currentLocation = Get-Location
     Set-Location $publishPath
     docker build -t $imageName .
+    # Возвращаемся обратно
+    Set-Location $currentLocation
     
     if ($LASTEXITCODE -eq 0) {
         Write-ColorOutput "Сборка Docker образа завершена успешно!" "Green"

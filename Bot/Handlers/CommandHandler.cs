@@ -71,7 +71,7 @@ namespace FamilyBudgetBot.Bot.Handlers
                     break;
 
                 default:
-                    await _bot.SendTextMessageAsync(chatId, "Неизвестная команда. Используйте /help для списка команд.");
+                    await _bot.SendTextMessageAsync(chatId, "Неизвестная команда. Используйте команду /help для справки.");
                     break;
             }
         }
