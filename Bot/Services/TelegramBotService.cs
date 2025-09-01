@@ -52,6 +52,12 @@ namespace FamilyBudgetBot.Bot.Services
 
         private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
+            if (update.CallbackQuery != null)
+            {
+                await _commandHandler.HandleCallbackQuery(update.CallbackQuery);
+                return;
+            }
+
             if (update.Message is not { } message)
                 return;
 
@@ -70,6 +76,8 @@ namespace FamilyBudgetBot.Bot.Services
                     }
                 }
 
+               
+
                 // Обработка текстовых сообщений
                 if (message.Text is not { } messageText)
                     return;
@@ -82,7 +90,7 @@ namespace FamilyBudgetBot.Bot.Services
                 }
 
                 // Затем обрабатываем команды
-                if (messageText.StartsWith('/'))
+                if (messageText.StartsWith('/') || messageText == "ДОХОД" || messageText == "РАСХОД")
                 {
                     await _commandHandler.HandleCommand(chatId, messageText);
                     return;
@@ -94,6 +102,37 @@ namespace FamilyBudgetBot.Bot.Services
                     await _sqlQueryHandler.HandleSqlQuery(chatId, messageText);
                     return;
                 }
+                
+                
+                if (messageText == "ОТЧЁТ")
+                {
+                    await _commandHandler.GenerateReport(chatId);
+                    return;
+                }
+
+                if (messageText == "КАТЕГОРИИ")
+                {
+                    await _commandHandler.ShowExpenseCategories(chatId);
+                    return;
+                }
+
+                if (messageText == "СПРАВКА")
+                    {
+                        await _commandHandler.ShowHelp(chatId);
+                        return;
+                    }
+
+
+                if (messageText == "ДОБАВИТЬ КАТЕГОРИЮ")
+                {
+                    await _pendingActionHandler.ShowCategoryTypeSelection(chatId);
+                    return;
+                }
+
+              
+
+
+
 
                 // Обработка транзакций
                 var result = _budgetService.ProcessTransactionMessage(messageText);

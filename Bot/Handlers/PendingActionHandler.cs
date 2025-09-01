@@ -1,8 +1,9 @@
-﻿using System.Globalization;
-using FamilyBudgetBot.Data.Models;
+﻿using FamilyBudgetBot.Data.Models;
 using FamilyBudgetBot.Services;
+using System.Globalization;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace FamilyBudgetBot.Bot.Handlers
 {
@@ -57,9 +58,8 @@ namespace FamilyBudgetBot.Bot.Handlers
                     _budgetService.AddCategory(text.ToUpper(), categoryType);
                     RemovePendingAction(chatId);
 
-                    string typeName = categoryType == TransactionType.Income ? "доходов" :
-                                     categoryType == TransactionType.Expense ? "расходов" : "накоплений";
-                    await _bot.SendTextMessageAsync(chatId, $"✅ Категория {typeName} '{text}' добавлена!");
+                    string typeName = categoryType == TransactionType.Income ? "ДОХОДОВ" : "РАСХОДОВ";
+                    await _bot.SendTextMessageAsync(chatId, $"✅ Категория {typeName} '{text.ToUpper()}' добавлена!");
                     break;
             }
         }
@@ -68,12 +68,12 @@ namespace FamilyBudgetBot.Bot.Handlers
         {
             TransactionType selectedType;
 
-            switch (text.ToLower())
+            switch (text)
             {
-                case "/expense":
+                case "РАСХОД":
                     selectedType = TransactionType.Expense;
                     break;
-                case "/income":
+                case "ДОХОД":
                     selectedType = TransactionType.Income;
                     break;
 
@@ -89,15 +89,38 @@ namespace FamilyBudgetBot.Bot.Handlers
 
         public async Task ShowCategoryTypeSelection(long chatId)
         {
-            var typeMenu = @"📁 <b>Выберите тип категории:</b>
+            var typeMenu = @"📁 <b>Выберите тип категории:</b>";
 
-/expense - Категория расходов 💸
-/income - Категория доходов 💰";
+          // ОБЫЧНАЯ КЛАВИАТУРА
+            var keyboard = new ReplyKeyboardMarkup(new[]
+          {
+                new KeyboardButton[] { "ДОХОД" , "РАСХОД" },
+               
+          
+          
+            })
+            {
+                ResizeKeyboard = true,
+                OneTimeKeyboard = false
+            };
+
+          
+          //    ИНЛАЙН КЛАВИАТУРА
+          //              var keyboard = new InlineKeyboardMarkup(new[]
+          //           {
+          //      new[]
+          //      {
+          //          InlineKeyboardButton.WithCallbackData("Текст кнопки", "callback_data"),
+          //          InlineKeyboardButton.WithUrl("Открыть сайт", "https://example.com")
+          //      }
+          //  });
+
 
             await _bot.SendTextMessageAsync(
                 chatId,
                 typeMenu,
-                parseMode: ParseMode.Html
+                parseMode: ParseMode.Html,
+                replyMarkup: keyboard
             );
 
             _pendingActions[chatId] = ("SELECT_CATEGORY_TYPE", null);

@@ -1,12 +1,13 @@
-﻿using System.Globalization;
-using System.IO;
-using FamilyBudgetBot.Data.Models;
+﻿using FamilyBudgetBot.Data.Models;
 using FamilyBudgetBot.Services;
 using Microsoft.Data.Sqlite;
+using System.Globalization;
+using System.IO;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InputFiles;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace FamilyBudgetBot.Bot.Handlers
 {
@@ -16,16 +17,16 @@ namespace FamilyBudgetBot.Bot.Handlers
         private readonly BudgetService _budgetService;
         private readonly PendingActionHandler _pendingActionHandler;
         private readonly BackupHandler _backupHandler;
-        
 
-        public CommandHandler(ITelegramBotClient bot, BudgetService budgetService, PendingActionHandler pendingActionHandler, BackupHandler backupHandler ,string dbPath)
+
+        public CommandHandler(ITelegramBotClient bot, BudgetService budgetService, PendingActionHandler pendingActionHandler, BackupHandler backupHandler, string dbPath)
         {
             _bot = bot;
             _budgetService = budgetService;
             _pendingActionHandler = pendingActionHandler;
             _backupHandler = backupHandler;
-            
-           
+
+
         }
 
         public async Task HandleCommand(long chatId, string command)
@@ -58,7 +59,7 @@ namespace FamilyBudgetBot.Bot.Handlers
                     await ShowExpenseCategories(chatId);
                     break;
 
-                case "/incategories":
+                case "/incategories": //
                     await ShowIncomeCategories(chatId);
                     break;
 
@@ -76,22 +77,29 @@ namespace FamilyBudgetBot.Bot.Handlers
             }
         }
 
-        private async Task ShowExpenseCategories(long chatId)
+        public async Task ShowExpenseCategories(long chatId)
         {
             var expenseCategories = _budgetService.GetCategoriesByType(TransactionType.Expense);
 
-            string messegetext = "Категории РАСХОДОВ:\n" +
-                $"{string.Join("\n", expenseCategories.Select(c => c.Name))}" +
-                $"\n Чтобы посмотреть категроии ДОХОДОВ выполните команду: \n /incategories";
+            string messegetext = @"<b>КАТЕГОРИИ РАСХОДОВ:</b>" + "\n" +
+                $"{string.Join("\n", expenseCategories.Select(c => c.Name))}";
 
-            await _bot.SendTextMessageAsync(chatId, messegetext, parseMode: ParseMode.Html);
+            var keyboard = new InlineKeyboardMarkup(new[]
+                      {
+                 new[]
+                 {
+                     InlineKeyboardButton.WithCallbackData("КАТЕГОРИИ ДОХОДОВ", "income_categories"),
+                 }
+             });
+
+            await _bot.SendTextMessageAsync(chatId, messegetext, parseMode: ParseMode.Html, replyMarkup: keyboard);
         }
 
-        private async Task ShowIncomeCategories(long chatId)
+        public async Task ShowIncomeCategories(long chatId)
         {
             var incomeCategories = _budgetService.GetCategoriesByType(TransactionType.Income);
 
-            string messegetext = "Категории ДОХОДОВ:\n" +
+            string messegetext = @"<b>КАТЕГОРИИ ДОХОДОВ:</b>"+ "\n" +
                 $"{string.Join("\n", incomeCategories.Select(c => c.Name))}";
 
             await _bot.SendTextMessageAsync(chatId, messegetext, parseMode: ParseMode.Html);
@@ -99,6 +107,7 @@ namespace FamilyBudgetBot.Bot.Handlers
 
         private async Task ShowMainMenu(long chatId)
         {
+
             var menu = @"📊 <b>Управление семейным бюджетом</b>
 
 Доступные команды:
@@ -111,16 +120,26 @@ namespace FamilyBudgetBot.Bot.Handlers
 
 📝 <b>Добавление транзакций:</b>
 Отправьте сообщение в формате:
-<code>+1500 зарплата</code> - доход
-<code>-1500 продукты</code> - расход
-<code>1500 продукты</code> - расход по умолчанию
+<code>+1500 зарплата</code> - доход";
 
-<b>Доступные категории:</b>";
+            var keyboard = new ReplyKeyboardMarkup(new[]
+            {
+                new KeyboardButton[] { "ОТЧЁТ" , "КАТЕГОРИИ" },
+                new KeyboardButton[] { "СПРАВКА" , "ДОБАВИТЬ КАТЕГОРИЮ" },
 
+
+            })
+            {
+                ResizeKeyboard = true,
+                OneTimeKeyboard = false
+            };
+
+            await _bot.SendTextMessageAsync(chatId, "ГЛАВНОЕ МЕНЮ", parseMode: ParseMode.Html, replyMarkup: keyboard);
             await _bot.SendTextMessageAsync(chatId, menu, parseMode: ParseMode.Html);
+
         }
 
-        private async Task ShowHelp(long chatId)
+        public async Task ShowHelp(long chatId)
         {
             var helpText = @"🤖 <b>Справка по боту</b>
 
@@ -147,7 +166,7 @@ namespace FamilyBudgetBot.Bot.Handlers
             await _bot.SendTextMessageAsync(chatId, helpText, parseMode: ParseMode.Html);
         }
 
-        private async Task GenerateReport(long chatId)
+        public async Task GenerateReport(long chatId)
         {
             var transactions = _budgetService.GetTransactions(
                 DateTime.Now.AddMonths(-1),
@@ -167,7 +186,8 @@ namespace FamilyBudgetBot.Bot.Handlers
 
             var incomeReport = incomeTransactions
                 .GroupBy(t => t.CategoryId)
-                .Select(g => {
+                .Select(g =>
+                {
                     var category = categories.FirstOrDefault(c => c.Id == g.Key)?.Name ?? "Неизвестная";
                     return new { Category = category, Total = g.Sum(t => t.Amount) };
                 })
@@ -175,7 +195,8 @@ namespace FamilyBudgetBot.Bot.Handlers
 
             var expenseReport = expenseTransactions
                 .GroupBy(t => t.CategoryId)
-                .Select(g => {
+                .Select(g =>
+                {
                     var category = categories.FirstOrDefault(c => c.Id == g.Key)?.Name ?? "Неизвестная";
                     return new { Category = category, Total = g.Sum(t => t.Amount) };
                 })
@@ -187,24 +208,50 @@ namespace FamilyBudgetBot.Bot.Handlers
             var balance = totalIncome - totalExpense;
 
             var message = $"📈 <b>Отчет за последний месяц</b>\n\n" +
-                          $"💰 <b>Доходы:</b> {totalIncome:C}\n" +
-                          $"💸 <b>Расходы:</b> {totalExpense:C}\n" +
-                          $"📊 <b>Баланс:</b> {balance:C}\n\n";
+                          $"💰 <b>Доходы:</b> {totalIncome:N0}\n" +
+                          $"💸 <b>Расходы:</b> {totalExpense:N0}\n" +
+                          $"📊 <b>Баланс:</b> {balance:N0}\n\n";
 
             if (incomeReport.Any())
             {
                 message += "<b>Доходы по категориям:</b>\n" +
-                           string.Join("\n", incomeReport.Select(r => $"- {r.Category}: {r.Total:C}")) + "\n\n";
+                           string.Join("\n", incomeReport.Select(r => $"- {r.Category}: {r.Total:N0} ")) + "\n\n";
             }
 
             if (expenseReport.Any())
             {
                 message += "<b>Расходы по категориям:</b>\n" +
-                           string.Join("\n", expenseReport.Select(r => $"- {r.Category}: {r.Total:C}")) + "\n\n";
+                           string.Join("\n", expenseReport.Select(r => $"- {r.Category}: {r.Total:N0} ")) + "\n\n";
             }
 
             await _bot.SendTextMessageAsync(chatId, message, parseMode: ParseMode.Html);
         }
-        
+
+        public async Task HandleCallbackQuery(CallbackQuery callbackQuery)
+        {
+            var chatId = callbackQuery.Message.Chat.Id;
+            var messageId = callbackQuery.Message.MessageId;
+            var data = callbackQuery.Data;
+
+            // Ответ на callback query (убирает "часик" loading)
+            await _bot.AnswerCallbackQueryAsync(callbackQuery.Id);
+
+            // Обработка различных callback данных
+            switch (data)
+            {
+                case "income_categories":
+                    // Обновляем сообщение с новой клавиатурой
+                    await ShowIncomeCategories(chatId);
+                    break;
+
+                case "btn2":
+                    // Отправляем новое сообщение
+                    await _bot.SendTextMessageAsync(chatId, "Вы нажали кнопку 2");
+                    break;
+
+                    // Добавьте другие case для обработки различных callback данных
+            }
+
+        }
     }
 }
