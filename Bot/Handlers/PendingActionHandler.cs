@@ -4,6 +4,7 @@ using System.Globalization;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using TGBotLog.Bot.Services;
 
 namespace FamilyBudgetBot.Bot.Handlers
 {
@@ -59,7 +60,7 @@ namespace FamilyBudgetBot.Bot.Handlers
                     RemovePendingAction(chatId);
 
                     string typeName = categoryType == TransactionType.Income ? "ДОХОДОВ" : "РАСХОДОВ";
-                    await _bot.SendTextMessageAsync(chatId, $"✅ Категория {typeName} '{text.ToUpper()}' добавлена!");
+                    await _bot.SendTextMessageAsync(chatId, $"✅ Категория {typeName} '{text.ToUpper()}' добавлена!", replyMarkup: Keyboards.MainMenu);
                     break;
             }
         }
@@ -78,8 +79,7 @@ namespace FamilyBudgetBot.Bot.Handlers
                     break;
 
                 default:
-                    await _bot.SendTextMessageAsync(chatId, "Неверный тип категории");
-                    await ShowCategoryTypeSelection(chatId);
+                    await _bot.SendTextMessageAsync(chatId, "ГЛАВНОЕ МЕНЮ", replyMarkup: Keyboards.MainMenu);
                     return;
             }
 
@@ -91,36 +91,13 @@ namespace FamilyBudgetBot.Bot.Handlers
         {
             var typeMenu = @"📁 <b>Выберите тип категории:</b>";
 
-          // ОБЫЧНАЯ КЛАВИАТУРА
-            var keyboard = new ReplyKeyboardMarkup(new[]
-          {
-                new KeyboardButton[] { "ДОХОД" , "РАСХОД" },
-               
-          
-          
-            })
-            {
-                ResizeKeyboard = true,
-                OneTimeKeyboard = false
-            };
-
-          
-          //    ИНЛАЙН КЛАВИАТУРА
-          //              var keyboard = new InlineKeyboardMarkup(new[]
-          //           {
-          //      new[]
-          //      {
-          //          InlineKeyboardButton.WithCallbackData("Текст кнопки", "callback_data"),
-          //          InlineKeyboardButton.WithUrl("Открыть сайт", "https://example.com")
-          //      }
-          //  });
-
+                
 
             await _bot.SendTextMessageAsync(
                 chatId,
                 typeMenu,
                 parseMode: ParseMode.Html,
-                replyMarkup: keyboard
+                replyMarkup: Keyboards.SelectTypeOfCategorie
             );
 
             _pendingActions[chatId] = ("SELECT_CATEGORY_TYPE", null);

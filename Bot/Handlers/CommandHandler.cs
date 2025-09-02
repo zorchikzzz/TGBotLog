@@ -8,6 +8,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
+using TGBotLog.Bot.Services;
 
 namespace FamilyBudgetBot.Bot.Handlers
 {
@@ -17,6 +18,7 @@ namespace FamilyBudgetBot.Bot.Handlers
         private readonly BudgetService _budgetService;
         private readonly PendingActionHandler _pendingActionHandler;
         private readonly BackupHandler _backupHandler;
+        
 
 
         public CommandHandler(ITelegramBotClient bot, BudgetService budgetService, PendingActionHandler pendingActionHandler, BackupHandler backupHandler, string dbPath)
@@ -25,6 +27,7 @@ namespace FamilyBudgetBot.Bot.Handlers
             _budgetService = budgetService;
             _pendingActionHandler = pendingActionHandler;
             _backupHandler = backupHandler;
+           
 
 
         }
@@ -122,19 +125,8 @@ namespace FamilyBudgetBot.Bot.Handlers
 Отправьте сообщение в формате:
 <code>+1500 зарплата</code> - доход";
 
-            var keyboard = new ReplyKeyboardMarkup(new[]
-            {
-                new KeyboardButton[] { "ОТЧЁТ" , "КАТЕГОРИИ" },
-                new KeyboardButton[] { "СПРАВКА" , "ДОБАВИТЬ КАТЕГОРИЮ" },
 
-
-            })
-            {
-                ResizeKeyboard = true,
-                OneTimeKeyboard = false
-            };
-
-            await _bot.SendTextMessageAsync(chatId, "ГЛАВНОЕ МЕНЮ", parseMode: ParseMode.Html, replyMarkup: keyboard);
+            await _bot.SendTextMessageAsync(chatId, "ГЛАВНОЕ МЕНЮ", parseMode: ParseMode.Html, replyMarkup: Keyboards.MainMenu);
             await _bot.SendTextMessageAsync(chatId, menu, parseMode: ParseMode.Html);
 
         }

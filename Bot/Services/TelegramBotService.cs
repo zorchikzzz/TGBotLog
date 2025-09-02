@@ -5,6 +5,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using FamilyBudgetBot.Services;
 using FamilyBudgetBot.Bot.Handlers;
+using TGBotLog.Bot.Services;
 
 namespace FamilyBudgetBot.Bot.Services
 {
@@ -119,6 +120,12 @@ namespace FamilyBudgetBot.Bot.Services
                 if (messageText == "СПРАВКА")
                     {
                         await _commandHandler.ShowHelp(chatId);
+                        return;
+                    }
+                
+                if (messageText == "ОТМЕНА")
+                    {
+                    await botClient.SendTextMessageAsync(chatId, "ГЛАВНОЕ МЕНЮ", replyMarkup: Keyboards.MainMenu);
                         return;
                     }
 
