@@ -44,8 +44,10 @@ namespace FamilyBudgetBot.Bot.Handlers
 
         public async Task HandlePendingAction(long chatId, string text)
         {
+            
             if (!_pendingActions.TryGetValue(chatId, out var pending))
-                return;
+                
+            return;
 
             switch (pending.Action)
             {
@@ -55,11 +57,21 @@ namespace FamilyBudgetBot.Bot.Handlers
                     break;
 
                 case "ADD_CATEGORY":
+                    RemovePendingAction(chatId);
+                    if (text == "ДОХОД" || text == "РАСХОД" || text == "ОТМЕНА")
+                    {
+                        await _bot.SendTextMessageAsync(chatId, "ОПЕРАЦИЯ ОТМЕНЕНА", replyMarkup: Keyboards.MainMenu);
+                        return;
+                    }
+
                     TransactionType categoryType = (TransactionType)(pending.CategoryId ?? 0);
                     _budgetService.AddCategory(text.ToUpper(), categoryType);
-                    RemovePendingAction(chatId);
+                    
+                    
+                    
 
                     string typeName = categoryType == TransactionType.Income ? "ДОХОДОВ" : "РАСХОДОВ";
+                    
                     await _bot.SendTextMessageAsync(chatId, $"✅ Категория {typeName} '{text.ToUpper()}' добавлена!", replyMarkup: Keyboards.MainMenu);
                     break;
             }
@@ -80,6 +92,7 @@ namespace FamilyBudgetBot.Bot.Handlers
 
                 default:
                     await _bot.SendTextMessageAsync(chatId, "ГЛАВНОЕ МЕНЮ", replyMarkup: Keyboards.MainMenu);
+                    RemovePendingAction(chatId);
                     return;
             }
 

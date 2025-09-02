@@ -77,7 +77,7 @@ namespace FamilyBudgetBot.Bot.Services
                     }
                 }
 
-               
+
 
                 // Обработка текстовых сообщений
                 if (message.Text is not { } messageText)
@@ -91,7 +91,7 @@ namespace FamilyBudgetBot.Bot.Services
                 }
 
                 // Затем обрабатываем команды
-                if (messageText.StartsWith('/') || messageText == "ДОХОД" || messageText == "РАСХОД")
+                if (messageText.StartsWith('/') )
                 {
                     await _commandHandler.HandleCommand(chatId, messageText);
                     return;
@@ -123,12 +123,7 @@ namespace FamilyBudgetBot.Bot.Services
                         return;
                     }
                 
-                if (messageText == "ОТМЕНА")
-                    {
-                    await botClient.SendTextMessageAsync(chatId, "ГЛАВНОЕ МЕНЮ", replyMarkup: Keyboards.MainMenu);
-                        return;
-                    }
-
+                
 
                 if (messageText == "ДОБАВИТЬ КАТЕГОРИЮ")
                 {
