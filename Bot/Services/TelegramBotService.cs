@@ -5,7 +5,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using FamilyBudgetBot.Services;
 using FamilyBudgetBot.Bot.Handlers;
-using TGBotLog.Bot.Services;
+using TGBotLog.Bot.Handlers;
 
 namespace FamilyBudgetBot.Bot.Services
 {
@@ -13,23 +13,31 @@ namespace FamilyBudgetBot.Bot.Services
     {
         private readonly ITelegramBotClient _bot;
         private readonly BudgetService _budgetService;
-        private readonly CommandHandler _commandHandler;
+        private readonly CallbackHandler _callbackHandler;
         private readonly PendingActionHandler _pendingActionHandler;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly BackupHandler _backupHandler;
         private readonly SqlQueryHandler _sqlQueryHandler;
+        private readonly CommandHandler _commandHandler;
 
         public TelegramBotService(string botToken, BudgetService budgetService, string dbPath)
         {
             _bot = new TelegramBotClient(botToken);
             _budgetService = budgetService;
+
+            // Сначала инициализируем все зависимости
+            _cancellationTokenSource = new CancellationTokenSource();
             _pendingActionHandler = new PendingActionHandler(_bot, _budgetService);
             _backupHandler = new BackupHandler(_bot, _budgetService, _pendingActionHandler, dbPath);
-            _commandHandler = new CommandHandler(_bot, _budgetService, _pendingActionHandler, _backupHandler, dbPath);
-            _cancellationTokenSource = new CancellationTokenSource();
             _sqlQueryHandler = new SqlQueryHandler(_bot, dbPath);
 
+            // Теперь инициализируем CommandHandler с правильными зависимостями
+            _commandHandler = new CommandHandler(_bot, _budgetService, _pendingActionHandler, _backupHandler, dbPath);
+
+            // Инициализируем CallbackHandler с необходимыми зависимостями
+            _callbackHandler = new CallbackHandler(_bot, _pendingActionHandler, _commandHandler);
         }
+
 
         public void Start()
         {
@@ -55,7 +63,7 @@ namespace FamilyBudgetBot.Bot.Services
         {
             if (update.CallbackQuery != null)
             {
-                await _commandHandler.HandleCallbackQuery(update.CallbackQuery);
+                await _callbackHandler.HandleCallbackQuery(update.CallbackQuery);
                 return;
             }
 
@@ -63,6 +71,7 @@ namespace FamilyBudgetBot.Bot.Services
                 return;
 
             var chatId = message.Chat.Id;
+
 
             try
             {

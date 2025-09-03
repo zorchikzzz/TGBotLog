@@ -4,7 +4,7 @@ using System.Globalization;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using TGBotLog.Bot.Services;
+using TGBotLog.Data.Models;
 
 namespace FamilyBudgetBot.Bot.Handlers
 {
@@ -77,7 +77,7 @@ namespace FamilyBudgetBot.Bot.Handlers
             }
         }
 
-        private async Task HandleCategoryTypeSelection(long chatId, string text)
+        public async Task HandleCategoryTypeSelection(long chatId, string text)
         {
             TransactionType selectedType;
 
@@ -104,13 +104,19 @@ namespace FamilyBudgetBot.Bot.Handlers
         {
             var typeMenu = @"📁 <b>Выберите тип категории:</b>";
 
-                
+
+            await _bot.SendTextMessageAsync(
+               chatId,
+               "_____",
+               parseMode: ParseMode.Html,
+               replyMarkup: Keyboards.SelectTypeOfCategorie
+           );
 
             await _bot.SendTextMessageAsync(
                 chatId,
                 typeMenu,
                 parseMode: ParseMode.Html,
-                replyMarkup: Keyboards.SelectTypeOfCategorie
+                replyMarkup: Keyboards.SelectTypeOFCategorie
             );
 
             _pendingActions[chatId] = ("SELECT_CATEGORY_TYPE", null);

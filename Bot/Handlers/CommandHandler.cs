@@ -8,7 +8,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
-using TGBotLog.Bot.Services;
+using TGBotLog.Data.Models;
 
 namespace FamilyBudgetBot.Bot.Handlers
 {
@@ -27,8 +27,6 @@ namespace FamilyBudgetBot.Bot.Handlers
             _budgetService = budgetService;
             _pendingActionHandler = pendingActionHandler;
             _backupHandler = backupHandler;
-           
-
 
         }
 
@@ -87,16 +85,9 @@ namespace FamilyBudgetBot.Bot.Handlers
             string messegetext = @"<b>КАТЕГОРИИ РАСХОДОВ:</b>" + "\n" +
                 $"{string.Join("\n", expenseCategories.Select(c => c.Name))}";
 
-            var keyboard = new InlineKeyboardMarkup(new[]
-                      {
-                 new[]
-                 {
-                     InlineKeyboardButton.WithCallbackData("КАТЕГОРИИ ДОХОДОВ", "income_categories"),
-                 }
-             });
-
-            await _bot.SendTextMessageAsync(chatId, messegetext, parseMode: ParseMode.Html, replyMarkup: keyboard);
+            await _bot.SendTextMessageAsync(chatId, messegetext, parseMode: ParseMode.Html, replyMarkup: Keyboards.showIncomeCategoriesButton);
         }
+
 
         public async Task ShowIncomeCategories(long chatId)
         {
@@ -108,54 +99,17 @@ namespace FamilyBudgetBot.Bot.Handlers
             await _bot.SendTextMessageAsync(chatId, messegetext, parseMode: ParseMode.Html);
         }
 
+
         private async Task ShowMainMenu(long chatId)
         {
-
-            var menu = @"📊 <b>Управление семейным бюджетом</b>
-
-Доступные команды:
-/addcategory - Добавить категорию
-/report - Показать отчет
-/help - Показать справку
-/categories - Показать существующие категории
-/backup - Скачать резервную копию базы данных
-/restore - Восстановить базу данных из резервной копии
-
-📝 <b>Добавление транзакций:</b>
-Отправьте сообщение в формате:
-<code>+1500 зарплата</code> - доход";
-
-
             await _bot.SendTextMessageAsync(chatId, "ГЛАВНОЕ МЕНЮ", parseMode: ParseMode.Html, replyMarkup: Keyboards.MainMenu);
-            await _bot.SendTextMessageAsync(chatId, menu, parseMode: ParseMode.Html);
-
+            await _bot.SendTextMessageAsync(chatId, MessegeTexts.MenuText, parseMode: ParseMode.Html);
         }
 
+       
         public async Task ShowHelp(long chatId)
         {
-            var helpText = @"🤖 <b>Справка по боту</b>
-
-<b>Команды которые можно выполнить:</b>
-/start - Главное меню
-/addcategory - Добавить новую категорию
-/report - Показать отчет за последний месяц
-/backup - Скачать резервную копию базы данных
-/restore - Восстановить базу данных из резервной копии
-/help - Это информация о боте.
-
-<b>Добавление транзакций:</b>
-Отправьте сообщение в формате:
-<code>+1500(сумма) ПРОДУКТЫ (категория кторая должна быть добавлена заранее) КОММЕНТАРИЙ (опционально, можо доплнить транзакцию дополнительными сведениями котрые внесут ясность вдальнейшем)</code> 
-
-
-<b>Типы категорий:</b>
-/expense - Категория расходов (траты)
-/income - Категория доходов (поступления)
-
-❗ <b>Важно:</b> Категория должна быть создана заранее с помощью команды
-/addcategory";
-
-            await _bot.SendTextMessageAsync(chatId, helpText, parseMode: ParseMode.Html);
+            await _bot.SendTextMessageAsync(chatId, MessegeTexts.HelpText, parseMode: ParseMode.Html);
         }
 
         public async Task GenerateReport(long chatId)
@@ -219,31 +173,6 @@ namespace FamilyBudgetBot.Bot.Handlers
             await _bot.SendTextMessageAsync(chatId, message, parseMode: ParseMode.Html);
         }
 
-        public async Task HandleCallbackQuery(CallbackQuery callbackQuery)
-        {
-            var chatId = callbackQuery.Message.Chat.Id;
-            var messageId = callbackQuery.Message.MessageId;
-            var data = callbackQuery.Data;
-
-            // Ответ на callback query (убирает "часик" loading)
-            await _bot.AnswerCallbackQueryAsync(callbackQuery.Id);
-
-            // Обработка различных callback данных
-            switch (data)
-            {
-                case "income_categories":
-                    // Обновляем сообщение с новой клавиатурой
-                    await ShowIncomeCategories(chatId);
-                    break;
-
-                case "btn2":
-                    // Отправляем новое сообщение
-                    await _bot.SendTextMessageAsync(chatId, "Вы нажали кнопку 2");
-                    break;
-
-                    // Добавьте другие case для обработки различных callback данных
-            }
-
-        }
+       
     }
 }
