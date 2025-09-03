@@ -15,8 +15,8 @@ namespace TGBotLog.Data.Models
         public static readonly ReplyKeyboardMarkup MainMenu =
             new ReplyKeyboardMarkup(new[]
             {
-                new KeyboardButton[] { "ОТЧЁТ" , "КАТЕГОРИИ" },
-                new KeyboardButton[] { "СПРАВКА" , "ДОБАВИТЬ КАТЕГОРИЮ" },
+                new KeyboardButton[] { "ОТЧЁТ" , "НЕДАВНИЕ ОПЕРАЦИИ" },
+                new KeyboardButton[] { "КАТЕГОРИИ" , "ДОБАВИТЬ КАТЕГОРИЮ" },
 
             })
             {

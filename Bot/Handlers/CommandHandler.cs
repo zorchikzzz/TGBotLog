@@ -1,13 +1,15 @@
-﻿using FamilyBudgetBot.Data.Models;
+﻿using System.Globalization;
+using System.IO;
+using System.Text;
+using FamilyBudgetBot.Data.Models;
 using FamilyBudgetBot.Services;
 using Microsoft.Data.Sqlite;
-using System.Globalization;
-using System.IO;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
+using TGBotLog.Bot.Services;
 using TGBotLog.Data.Models;
 
 namespace FamilyBudgetBot.Bot.Handlers
@@ -17,11 +19,11 @@ namespace FamilyBudgetBot.Bot.Handlers
         private readonly ITelegramBotClient _bot;
         private readonly BudgetService _budgetService;
         private readonly PendingActionHandler _pendingActionHandler;
-        private readonly BackupHandler _backupHandler;
+        private readonly BackupService _backupHandler;
         
 
 
-        public CommandHandler(ITelegramBotClient bot, BudgetService budgetService, PendingActionHandler pendingActionHandler, BackupHandler backupHandler, string dbPath)
+        public CommandHandler(ITelegramBotClient bot, BudgetService budgetService, PendingActionHandler pendingActionHandler, BackupService backupHandler, string dbPath)
         {
             _bot = bot;
             _budgetService = budgetService;
@@ -60,7 +62,7 @@ namespace FamilyBudgetBot.Bot.Handlers
                     await ShowExpenseCategories(chatId);
                     break;
 
-                case "/incategories": //
+                case "/incategories": 
                     await ShowIncomeCategories(chatId);
                     break;
 
@@ -115,6 +117,7 @@ namespace FamilyBudgetBot.Bot.Handlers
         public async Task GenerateReport(long chatId)
         {
             var firstDayOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+           
             var transactions = _budgetService.GetTransactions(
                 firstDayOfMonth,
                 DateTime.Now
@@ -155,9 +158,9 @@ namespace FamilyBudgetBot.Bot.Handlers
             var balance = totalIncome - totalExpense;
 
             var message = $"📈 <b>Отчет за последний месяц</b>\n\n" +
-                          $"💰 <b>Доходы:</b> {totalIncome:N0}\n" +
-                          $"💸 <b>Расходы:</b> {totalExpense:N0}\n" +
-                          $"📊 <b>Баланс:</b> {balance:N0}\n\n";
+                          $"💰 <b>Доходы:</b>   {totalIncome:N0}\n" +
+                          $"💸 <b>Расходы:</b>  {totalExpense:N0}\n" +
+                          $"📊 <b>Баланс:</b>   {balance:N0}\n\n";
 
             if (incomeReport.Any())
             {
@@ -174,6 +177,59 @@ namespace FamilyBudgetBot.Bot.Handlers
             await _bot.SendTextMessageAsync(chatId, message, parseMode: ParseMode.Html);
         }
 
-       
+
+        public async Task ShowLast10Transactions(long chatId)
+        {
+            var transactions = _budgetService.GetTransactions(null, null, true);
+
+            if (transactions == null || transactions.Count == 0)
+            {
+                await _bot.SendTextMessageAsync(chatId, "Нет данных о транзакциях");
+                return;
+            }
+
+            var categories = _budgetService.GetAllCategories();
+
+            // Создаем таблицу с выравниванием
+            var message = new StringBuilder();
+            message.AppendLine("💳 <b>ПОСЛЕДНИЕ 10 ОПЕРАЦИЙ:</b>\n");
+
+            // Добавляем заголовок таблицы
+            message.AppendLine("<pre>");
+            message.AppendLine("Тип        Сумма   Категория        Дата и время");
+            message.AppendLine("------------------------------------------------");
+
+            // Добавляем строки с транзакциями
+            foreach (var transaction in transactions)
+            {
+                var category = categories.FirstOrDefault(c => c.Id == transaction.CategoryId);
+                var categoryName = category?.Name ?? "Неизвестная";
+
+                // Обрезаем длинные названия категорий
+                if (categoryName.Length > 15)
+                    categoryName = categoryName.Substring(0, 12) + "...";
+
+                // Форматируем дату
+                var date = transaction.Date.ToString("ddd dd.MM. HH:mm");
+
+                // Форматируем сумму с выравниванием
+                var amount = transaction.Amount.ToString("N0").PadLeft(8);
+                var typeSign = transaction.Type == TransactionType.Income ? "ДОХОД" : "РАСХОД";
+
+                // Добавляем строку в таблицу
+                message.AppendLine(
+            $"{typeSign,-7} " +    // Тип операции (7 символов, выравнивание по левому краю)
+            $"{amount,8}   " +       // Сумма (8 символов, выравнивание по правому краю)
+            $"{categoryName,-13} " + // Категория (15 символов, выравнивание по левому краю)
+            $"{date}"              // Дата
+        );
+
+            }
+
+            message.AppendLine("</pre>");
+
+            await _bot.SendTextMessageAsync(chatId, message.ToString(), parseMode: ParseMode.Html);
+        }
+
     }
 }

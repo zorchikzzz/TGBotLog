@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.IO;
+using FamilyBudgetBot.Bot.Handlers;
 using FamilyBudgetBot.Data.Models;
 using FamilyBudgetBot.Services;
 using Microsoft.Data.Sqlite;
@@ -8,16 +9,16 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InputFiles;
 
-namespace FamilyBudgetBot.Bot.Handlers
+namespace TGBotLog.Bot.Services
 {
-    public class BackupHandler
+    public class BackupService
     {
         private readonly ITelegramBotClient _bot;
         private readonly BudgetService _budgetService;
         private readonly PendingActionHandler _pendingActionHandler;
         private readonly string _dbPath;
 
-        public BackupHandler(ITelegramBotClient bot, BudgetService budgetService, PendingActionHandler pendingActionHandler, string dbPath)
+        public BackupService(ITelegramBotClient bot, BudgetService budgetService, PendingActionHandler pendingActionHandler, string dbPath)
         {
             _bot = bot;
             _budgetService = budgetService;

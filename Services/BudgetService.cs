@@ -32,8 +32,9 @@ namespace FamilyBudgetBot.Services
         public Category? GetCategoryById(int id) => _repository.GetCategoryById(id);
 
         /// Получение транзакций за указанный период
-        public List<Transaction> GetTransactions(DateTime? startDate, DateTime? endDate) =>
-            _repository.GetTransactions(startDate, endDate);
+        public List<Transaction> GetTransactions(DateTime? startDate, DateTime? endDate, bool Last10 = false) =>
+            _repository.GetTransactions(startDate, endDate, Last10);
+
 
         /// Обработка текстового сообщения с транзакцией
         /// Разбирает сообщение формата "1500 продукты покупки в магазине"

@@ -148,7 +148,8 @@ namespace FamilyBudgetBot.Data.Repositories
             return null;
         }
 
-        public List<Transaction> GetTransactions(DateTime? startDate = null, DateTime? endDate = null)
+        public List<Transaction> GetTransactions(DateTime? startDate = null, DateTime? endDate = null, 
+            bool last10 = false )
         {
             var transactions = new List<Transaction>();
             using var connection = GetOpenConnection();
@@ -169,6 +170,11 @@ namespace FamilyBudgetBot.Data.Repositories
             {
                 cmd.CommandText += " AND Date <= $endDate";
                 cmd.Parameters.AddWithValue("$endDate", endDate.Value.ToString("o"));
+            }
+
+            if (last10 == true)
+            {
+                cmd.CommandText += " ORDER BY Date DESC LIMIT (10)";
             }
 
             using var reader = cmd.ExecuteReader();

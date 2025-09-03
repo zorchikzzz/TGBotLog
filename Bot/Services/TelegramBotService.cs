@@ -6,6 +6,7 @@ using Telegram.Bot.Types.Enums;
 using FamilyBudgetBot.Services;
 using FamilyBudgetBot.Bot.Handlers;
 using TGBotLog.Bot.Handlers;
+using TGBotLog.Bot.Services;
 
 namespace FamilyBudgetBot.Bot.Services
 {
@@ -16,7 +17,7 @@ namespace FamilyBudgetBot.Bot.Services
         private readonly CallbackHandler _callbackHandler;
         private readonly PendingActionHandler _pendingActionHandler;
         private readonly CancellationTokenSource _cancellationTokenSource;
-        private readonly BackupHandler _backupHandler;
+        private readonly BackupService _backupHandler;
         private readonly SqlQueryHandler _sqlQueryHandler;
         private readonly CommandHandler _commandHandler;
 
@@ -28,7 +29,7 @@ namespace FamilyBudgetBot.Bot.Services
             // Сначала инициализируем все зависимости
             _cancellationTokenSource = new CancellationTokenSource();
             _pendingActionHandler = new PendingActionHandler(_bot, _budgetService);
-            _backupHandler = new BackupHandler(_bot, _budgetService, _pendingActionHandler, dbPath);
+            _backupHandler = new BackupService(_bot, _budgetService, _pendingActionHandler, dbPath);
             _sqlQueryHandler = new SqlQueryHandler(_bot, dbPath);
 
             // Теперь инициализируем CommandHandler с правильными зависимостями
@@ -126,13 +127,13 @@ namespace FamilyBudgetBot.Bot.Services
                     return;
                 }
 
-                if (messageText == "СПРАВКА")
-                    {
-                        await _commandHandler.ShowHelp(chatId);
-                        return;
-                    }
-                
-                
+                if (messageText == "НЕДАВНИЕ ОПЕРАЦИИ")
+                {
+                    await _commandHandler.ShowLast10Transactions(chatId);
+                    return;
+                }
+
+
 
                 if (messageText == "ДОБАВИТЬ КАТЕГОРИЮ")
                 {
