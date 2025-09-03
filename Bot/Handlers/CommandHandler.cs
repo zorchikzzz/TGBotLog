@@ -114,8 +114,9 @@ namespace FamilyBudgetBot.Bot.Handlers
 
         public async Task GenerateReport(long chatId)
         {
+            var firstDayOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             var transactions = _budgetService.GetTransactions(
-                DateTime.Now.AddMonths(-1),
+                firstDayOfMonth,
                 DateTime.Now
             );
 
