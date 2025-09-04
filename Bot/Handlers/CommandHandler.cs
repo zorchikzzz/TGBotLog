@@ -117,7 +117,7 @@ namespace FamilyBudgetBot.Bot.Handlers
         public async Task GenerateReport(long chatId)
         {
             var firstDayOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-           
+            Console.WriteLine($"Запрос данных за период: {firstDayOfMonth} - {DateTime.Now}");
             var transactions = _budgetService.GetTransactions(
                 firstDayOfMonth,
                 DateTime.Now
@@ -157,24 +157,26 @@ namespace FamilyBudgetBot.Bot.Handlers
 
             var balance = totalIncome - totalExpense;
 
-            var message = $"📈 <b>Отчет за последний месяц</b>\n\n" +
-                          $"💰 <b>Доходы:</b>   {totalIncome:N0}\n" +
-                          $"💸 <b>Расходы:</b>  {totalExpense:N0}\n" +
-                          $"📊 <b>Баланс:</b>   {balance:N0}\n\n";
+            var message = new StringBuilder();
+            message.AppendLine(
+                          $"📈 <b>Отчет за последний месяц</b>\n\n" +
+                          $"💰 <b>Доходы:</b>    {totalIncome,7:N0}\n" +
+                          $"💸 <b>Расходы:</b>   {totalExpense,7:N0}\n" +
+                          $"📊 <b>Баланс:</b>    {balance,7:N0}\n\n");
 
             if (incomeReport.Any())
             {
-                message += "<b>Доходы по категориям:</b>\n" +
-                           string.Join("\n", incomeReport.Select(r => $"- {r.Category}: {r.Total:N0} ")) + "\n\n";
+                message.AppendLine( "<b>Доходы по категориям:</b>\n" +
+                           string.Join("\n", incomeReport.Select(r => $"{r.Total,-7:N0}                   {r.Category,-9}")) + "\n\n");
             }
 
             if (expenseReport.Any())
             {
-                message += "<b>Расходы по категориям:</b>\n" +
-                           string.Join("\n", expenseReport.Select(r => $"- {r.Category}: {r.Total:N0} ")) + "\n\n";
+                message.AppendLine( "<b>Расходы по категориям:</b>\n" +
+                           string.Join("\n", expenseReport.Select(r => $"{r.Total,-7:N0}                   {r.Category,-9}")) + "\n\n");
             }
 
-            await _bot.SendTextMessageAsync(chatId, message, parseMode: ParseMode.Html);
+            await _bot.SendTextMessageAsync(chatId, message.ToString(), parseMode: ParseMode.Html);
         }
 
 
