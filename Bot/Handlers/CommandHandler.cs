@@ -196,32 +196,36 @@ namespace FamilyBudgetBot.Bot.Handlers
 
             // Добавляем заголовок таблицы
             message.AppendLine("<pre>");
-            message.AppendLine("Тип        Сумма   Категория        Дата и время");
-            message.AppendLine("------------------------------------------------");
-
+          
             // Добавляем строки с транзакциями
             foreach (var transaction in transactions)
             {
                 var category = categories.FirstOrDefault(c => c.Id == transaction.CategoryId);
                 var categoryName = category?.Name ?? "Неизвестная";
+                var description = transaction.Description;
+                
 
                 // Обрезаем длинные названия категорий
                 if (categoryName.Length > 15)
                     categoryName = categoryName.Substring(0, 12) + "...";
+                if (description.Length > 16)
+                    description = description.Substring(0, 14) + "...";
 
                 // Форматируем дату
-                var date = transaction.Date.ToString("ddd dd.MM. HH:mm");
+                //var date = transaction.Date.ToString("dd.MM");
 
                 // Форматируем сумму с выравниванием
-                var amount = transaction.Amount.ToString("N0").PadLeft(8);
-                var typeSign = transaction.Type == TransactionType.Income ? "ДОХОД" : "РАСХОД";
+                var amount = transaction.Amount.ToString("N0");
+                var typeSign = transaction.Type == TransactionType.Income ? "➕" : "➖";
 
                 // Добавляем строку в таблицу
                 message.AppendLine(
-            $"{typeSign,-7} " +    // Тип операции (7 символов, выравнивание по левому краю)
-            $"{amount,8}   " +       // Сумма (8 символов, выравнивание по правому краю)
-            $"{categoryName,-13} " + // Категория (15 символов, выравнивание по левому краю)
-            $"{date}"              // Дата
+            $"{typeSign} " +    // Тип операции (7 символов, выравнивание по левому краю)
+            $"{amount,-5} " +       // Сумма (8 символов, выравнивание по правому краю)
+            $" {categoryName,-10} " + // Категория (15 символов, выравнивание по левому краю)
+           // $"{date,-5} " +
+            $"{description,-15}"
+
         );
 
             }
