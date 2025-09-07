@@ -2,12 +2,17 @@ FROM mcr.microsoft.com/dotnet/runtime:8.0
 
 WORKDIR /app
 
-# Устанавливаем необходимые пакеты
+# Устанавливаем необходимые пакеты + tzdata для часовых поясов
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     sudo \
     sqlite3 \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
+
+# Устанавливаем часовой пояс Moscow
+RUN ln -fs /usr/share/zoneinfo/Europe/Moscow /etc/localtime && \
+    echo "Europe/Moscow" > /etc/timezone
 
 # Копируем файлы приложения
 COPY . .
