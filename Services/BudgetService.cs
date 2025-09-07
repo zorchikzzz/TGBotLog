@@ -75,7 +75,7 @@ namespace FamilyBudgetBot.Services
                 {
                     Amount = amount,
                     CategoryId = category.Id,
-                    Date = DateTime.Now.AddHours(3),
+                    Date = DateTime.Now,
                     Description = description,
                     Type = transactionType
                 };
