@@ -120,7 +120,7 @@ namespace FamilyBudgetBot.Bot.Handlers
             Console.WriteLine($"Запрос данных за период: {firstDayOfMonth} - {DateTime.Now}");
             var transactions = _budgetService.GetTransactions(
                 firstDayOfMonth,
-                DateTime.UtcNow
+                DateTime.Now
             );
 
             if (transactions.Count == 0)
