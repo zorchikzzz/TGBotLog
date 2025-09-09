@@ -114,14 +114,30 @@ namespace FamilyBudgetBot.Bot.Handlers
             await _bot.SendTextMessageAsync(chatId, MessegeTexts.HelpText, parseMode: ParseMode.Html);
         }
 
-        public async Task GenerateReport(long chatId)
+        public async Task GenerateReport(long chatId, int? year = null, int? month = null)
         {
-            var firstDayOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-            Console.WriteLine($"Запрос данных за период: {firstDayOfMonth} - {DateTime.Now}");
+            DateTime startDate, endDate;
+            string periodTitle;
+
+            if (year.HasValue && month.HasValue)
+            {
+                startDate = new DateTime(year.Value, month.Value, 1);
+                endDate = startDate.AddMonths(1).AddDays(-1);
+                var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month.Value);
+                periodTitle = $"{monthName} {year.Value}";
+            }
+            else
+            {
+                startDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                endDate = DateTime.Now;
+                periodTitle = "последний месяц";
+            }
+
+            Console.WriteLine($"Запрос данных за период: {startDate} - {endDate}");
             var transactions = _budgetService.GetTransactions(
-                firstDayOfMonth,
-                DateTime.Now
-            );
+                startDate,
+                endDate
+                );
 
             if (transactions.Count == 0)
             {
@@ -159,10 +175,10 @@ namespace FamilyBudgetBot.Bot.Handlers
 
             var message = new StringBuilder();
             message.AppendLine(
-                          $"📈 <b>Отчет за последний месяц</b>\n\n" +
-                          $"💰 <b>Доходы:</b>    {totalIncome,7:N0}\n" +
-                          $"💸 <b>Расходы:</b>   {totalExpense,7:N0}\n" +
-                          $"📊 <b>Баланс:</b>    {balance,7:N0}\n\n");
+                $"📈 <b>Отчет за {periodTitle}</b>\n\n" +
+                $"💰 <b>Доходы:</b>    {totalIncome,7:N0}\n" +
+                $"💸 <b>Расходы:</b>   {totalExpense,7:N0}\n" +
+                $"📊 <b>Баланс:</b>    {balance,7:N0}\n\n");
 
             if (incomeReport.Any())
             {
@@ -175,9 +191,37 @@ namespace FamilyBudgetBot.Bot.Handlers
                 message.AppendLine( "<b>Расходы по категориям:</b>\n" +
                            string.Join("\n", expenseReport.Select(r => $"{r.Total,-7:N0}                   {r.Category,-9}")) + "\n\n");
             }
-
-            await _bot.SendTextMessageAsync(chatId, message.ToString(), parseMode: ParseMode.Html);
-        }
+if (!year.HasValue && !month.HasValue)
+    {
+        var inlineKeyboard = new InlineKeyboardMarkup(new[]
+        {
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("Выбрать период", "select_report_period")
+            }
+        });
+        
+        await _bot.SendTextMessageAsync(chatId, message.ToString(), 
+            parseMode: ParseMode.Html, 
+            replyMarkup: inlineKeyboard);
+    }
+    else
+    {
+        // Для отчетов за выбранный период также добавляем кнопку выбора периода
+        var inlineKeyboard = new InlineKeyboardMarkup(new[]
+        {
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("Выбрать период", "select_report_period")
+            }
+        });
+        
+        await _bot.SendTextMessageAsync(chatId, message.ToString(), 
+            parseMode: ParseMode.Html,
+            replyMarkup: inlineKeyboard);
+    }
+}
+        
 
 
         public async Task ShowLast10Transactions(long chatId)

@@ -36,7 +36,7 @@ namespace FamilyBudgetBot.Bot.Services
             _commandHandler = new CommandHandler(_bot, _budgetService, _pendingActionHandler, _backupHandler, dbPath);
 
             // Инициализируем CallbackHandler с необходимыми зависимостями
-            _callbackHandler = new CallbackHandler(_bot, _pendingActionHandler, _commandHandler);
+            _callbackHandler = new CallbackHandler(_bot, _pendingActionHandler, _commandHandler, _budgetService);
         }
 
 
@@ -117,6 +117,7 @@ namespace FamilyBudgetBot.Bot.Services
                 
                 if (messageText == "ОТЧЁТ")
                 {
+                    _callbackHandler.ResetLastSelectedYear(chatId);
                     await _commandHandler.GenerateReport(chatId);
                     return;
                 }

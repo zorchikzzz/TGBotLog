@@ -93,9 +93,13 @@ namespace FamilyBudgetBot.Services
         }
 
         public List<Category> GetCategoriesByType(TransactionType type)
-        {
+            {
             return _repository.GetAllCategories().Where(c => c.Type == type).ToList();
-        }
+            }
+
+        // В BudgetService.cs
+        public Dictionary<int, List<int>> GetTransactionYearsMonths() => 
+            _repository.GetTransactionYearsMonths();
 
         public void CloseConnection()
         {

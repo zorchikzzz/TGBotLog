@@ -5,11 +5,16 @@ using FamilyBudgetBot.Bot.Services;
 using System;
 using System.IO;
 using System.Threading;
+using System.Globalization;
 
 class Program
 {
     static void Main()
     {
+        // Установка русской культуры для всего приложения
+        var culture = new CultureInfo("ru-RU");
+         CultureInfo.DefaultThreadCurrentCulture = culture;
+         CultureInfo.DefaultThreadCurrentUICulture = culture;
         Console.OutputEncoding = System.Text.Encoding.UTF8;
 
         try

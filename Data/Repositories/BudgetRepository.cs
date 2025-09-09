@@ -194,10 +194,41 @@ namespace FamilyBudgetBot.Data.Repositories
             }
             return transactions;
         }
+        
+        // В BudgetRepository.cs
+        public Dictionary<int, List<int>> GetTransactionYearsMonths()
+        {
+            var result = new Dictionary<int, List<int>>();
+            
+            using var connection = GetOpenConnection();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT DISTINCT Date FROM Transactions ORDER BY Date DESC";
+            
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                if (DateTime.TryParse(reader.GetString(0), out DateTime date))
+                {
+                    if (!result.ContainsKey(date.Year))
+                        result[date.Year] = new List<int>();
+                        
+                    if (!result[date.Year].Contains(date.Month))
+                        result[date.Year].Add(date.Month);
+                }
+            }
+            
+            // Сортируем года по убыванию, а месяцы по возрастанию внутри года
+            return result
+                .OrderByDescending(x => x.Key)
+                .ToDictionary(
+                    y => y.Key, 
+                    y => y.Value.OrderBy(m => m).ToList()
+                );
+        }
 
         public void Dispose()
         {
-          
+
         }
        
     }
