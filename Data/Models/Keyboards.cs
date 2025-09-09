@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Text;
-using System.Threading.Tasks;
-using Telegram.Bot;
-using Telegram.Bot.Types.ReplyMarkups;
+﻿using Telegram.Bot.Types.ReplyMarkups;
+using System.Globalization;
+using Microsoft.VisualBasic;
 
 namespace TGBotLog.Data.Models
 {
@@ -20,9 +15,9 @@ namespace TGBotLog.Data.Models
 
             })
             {
-            ResizeKeyboard = true,
-            OneTimeKeyboard = false
-        
+                ResizeKeyboard = true,
+                OneTimeKeyboard = false
+
             };
 
 
@@ -33,9 +28,9 @@ namespace TGBotLog.Data.Models
             new KeyboardButton[] {"ОТМЕНА" }
             })
             {
-            ResizeKeyboard = true,
-            OneTimeKeyboard = false
-        
+                ResizeKeyboard = true,
+                OneTimeKeyboard = false
+
             };
 
         public static readonly InlineKeyboardMarkup showIncomeCategoriesButton = new InlineKeyboardMarkup(new[]
@@ -56,10 +51,69 @@ namespace TGBotLog.Data.Models
             }
         });
 
-    }
-                 
+        /// Создаёт инлайн-клавиатуру с кнопками месяцев и "Выбрать год"
 
-        
+        public static InlineKeyboardMarkup CreateYearMonthSelectionKB(int year, List<int> months)
+        {
+            var buttons = new List<InlineKeyboardButton[]>();
+
+            // Кнопки месяцев
+            foreach (var month in months)
+            {
+                var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
+                buttons.Add(new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(
+                        $"{monthName}",
+                        $"report_month_{year}_{month}")
+                });
+            }
+
+            // Кнопка "Выбрать год"
+            buttons.Add(new[]
+            {
+                InlineKeyboardButton.WithCallbackData("Выбрать год", "select_report_year")
+            });
+
+            return new InlineKeyboardMarkup(buttons);
+        }
+        public static InlineKeyboardMarkup CreateMonthSelectionKB(List<int> months, int year)
+        {
+            var buttons = new List<InlineKeyboardButton[]>();
+
+            foreach (var month in months)
+            {
+                var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
+                buttons.Add(new[]
+                {
+            InlineKeyboardButton.WithCallbackData(
+                $"{monthName}",
+                $"report_month_{year}_{month}")
+        });
+            }
+
+            return new InlineKeyboardMarkup(buttons);
+        }
+        public static InlineKeyboardMarkup CreateYearsSelectionKB(List<int> years)
+        {
+            var buttons = new List<InlineKeyboardButton[]>();
+
+            foreach (var year in years)
+            {
+                buttons.Add(new[]
+                {
+            InlineKeyboardButton.WithCallbackData(
+                year.ToString(),
+                $"select_month_{year}")
+                });
+            }
+
+            return new InlineKeyboardMarkup(buttons);
+
+        }
+
+
+    }
 
 }
 

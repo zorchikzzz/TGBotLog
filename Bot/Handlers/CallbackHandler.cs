@@ -1,15 +1,11 @@
 ﻿using FamilyBudgetBot.Bot.Handlers;
 using FamilyBudgetBot.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using System.Globalization;
 using Telegram.Bot.Types.ReplyMarkups;
-using System.Globalization;
+using TGBotLog.Data.Models ;
+
 
 namespace TGBotLog.Bot.Handlers
 {
@@ -114,30 +110,23 @@ namespace TGBotLog.Bot.Handlers
             }
 
             var months = yearsMonths[year];
-            var buttons = new List<InlineKeyboardButton[]>();
-
-            // Добавляем кнопки для каждого месяца указанного года
-            foreach (var month in months)
-            {
-                var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
-                buttons.Add(new[]
-                {
-            InlineKeyboardButton.WithCallbackData(
-                $"{monthName}",
-                $"report_month_{year}_{month}")
-        });
-            }
-
-            // Добавляем кнопку "Выбрать год"
-            buttons.Add(new[]
-            {
-        InlineKeyboardButton.WithCallbackData("Выбрать год", "select_report_year")
-    });
-
-            var inlineKeyboard = new InlineKeyboardMarkup(buttons);
 
             await _bot.SendTextMessageAsync(chatId, $"Выберите месяц за {year} год или выберите другой год:",
-                replyMarkup: inlineKeyboard);
+                replyMarkup: Keyboards.CreateYearMonthSelectionKB(year, months));
+        }
+        private async Task ShowMonthSelection(long chatId, int year)
+        {
+            var yearsMonths = _budgetService.GetTransactionYearsMonths();
+            if (!yearsMonths.ContainsKey(year) || yearsMonths[year].Count == 0)
+            {
+                await _bot.SendTextMessageAsync(chatId, "Данные за выбранный год не найдены.");
+                return;
+            }
+
+            var months = yearsMonths[year];
+            
+            await _bot.SendTextMessageAsync(chatId, $"Выберите месяц за {year} год:",
+                replyMarkup: Keyboards.CreateMonthSelectionKB(months, year));
         }
 
         private async Task ShowYearSelection(long chatId)
@@ -151,52 +140,10 @@ namespace TGBotLog.Bot.Handlers
                 return;
             }
 
-            var buttons = new List<InlineKeyboardButton[]>();
-
-            foreach (var year in years)
-            {
-                buttons.Add(new[]
-                {
-            InlineKeyboardButton.WithCallbackData(
-                year.ToString(),
-                $"select_month_{year}")
-        });
-            }
-
-            var inlineKeyboard = new InlineKeyboardMarkup(buttons);
-
             await _bot.SendTextMessageAsync(chatId, "Выберите год:",
-                replyMarkup: inlineKeyboard);
+                replyMarkup: Keyboards.CreateYearsSelectionKB(years));
         }
 
-        private async Task ShowMonthSelection(long chatId, int year)
-        {
-            var yearsMonths = _budgetService.GetTransactionYearsMonths();
-            if (!yearsMonths.ContainsKey(year) || yearsMonths[year].Count == 0)
-            {
-                await _bot.SendTextMessageAsync(chatId, "Данные за выбранный год не найдены.");
-                return;
-            }
-
-            var months = yearsMonths[year];
-            var buttons = new List<InlineKeyboardButton[]>();
-
-            foreach (var month in months)
-            {
-                var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
-                buttons.Add(new[]
-                {
-            InlineKeyboardButton.WithCallbackData(
-                $"{monthName}",
-                $"report_month_{year}_{month}")
-        });
-            }
-
-            var inlineKeyboard = new InlineKeyboardMarkup(buttons);
-
-            await _bot.SendTextMessageAsync(chatId, $"Выберите месяц за {year} год:",
-                replyMarkup: inlineKeyboard);
-        }
 
         public void ResetLastSelectedYear(long chatId)
 {
