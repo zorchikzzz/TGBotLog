@@ -20,6 +20,7 @@ namespace FamilyBudgetBot.Bot.Services
         private readonly BackupService _backupHandler;
         private readonly SqlQueryHandler _sqlQueryHandler;
         private readonly CommandHandler _commandHandler;
+        private readonly ReportService _reportService;
 
         public TelegramBotService(string botToken, BudgetService budgetService, string dbPath)
         {
@@ -31,12 +32,14 @@ namespace FamilyBudgetBot.Bot.Services
             _pendingActionHandler = new PendingActionHandler(_bot, _budgetService);
             _backupHandler = new BackupService(_bot, _budgetService, _pendingActionHandler, dbPath);
             _sqlQueryHandler = new SqlQueryHandler(_bot, dbPath);
+            _reportService = new ReportService(_budgetService, _bot);
+
 
             // Теперь инициализируем CommandHandler с правильными зависимостями
-            _commandHandler = new CommandHandler(_bot, _budgetService, _pendingActionHandler, _backupHandler, dbPath);
+            _commandHandler = new CommandHandler(_bot, _budgetService, _pendingActionHandler, _backupHandler, _reportService, dbPath);
 
             // Инициализируем CallbackHandler с необходимыми зависимостями
-            _callbackHandler = new CallbackHandler(_bot, _pendingActionHandler, _commandHandler, _budgetService);
+            _callbackHandler = new CallbackHandler(_bot, _pendingActionHandler, _commandHandler, _budgetService, _reportService);
         }
 
 
@@ -118,7 +121,7 @@ namespace FamilyBudgetBot.Bot.Services
                 if (messageText == "ОТЧЁТ")
                 {
                     _callbackHandler.ResetLastSelectedYear(chatId);
-                    await _commandHandler.GenerateReport(chatId);
+                    await _reportService.GenerateReport(chatId);
                     return;
                 }
 

@@ -1,12 +1,7 @@
-﻿using System.Globalization;
-using System.IO;
-using FamilyBudgetBot.Bot.Handlers;
-using FamilyBudgetBot.Data.Models;
+﻿using FamilyBudgetBot.Bot.Handlers;
 using FamilyBudgetBot.Services;
-using Microsoft.Data.Sqlite;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InputFiles;
 
 namespace TGBotLog.Bot.Services

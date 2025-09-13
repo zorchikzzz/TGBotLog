@@ -49,6 +49,7 @@ namespace TGBotLog.Data.Models
                 InlineKeyboardButton.WithCallbackData("РАСХОД", "expance_categorie_selected")
 
             }
+            
         });
 
         /// Создаёт инлайн-клавиатуру с кнопками месяцев и "Выбрать год"
@@ -57,40 +58,48 @@ namespace TGBotLog.Data.Models
         {
             var buttons = new List<InlineKeyboardButton[]>();
 
-            // Кнопки месяцев
-            foreach (var month in months)
+            bool onecolumn = false; // Переменная для переключения между двумя вариантами клавиатуры, в одну или три колонки
+
+            if (onecolumn == false)
             {
-                var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
-                buttons.Add(new[]
+                // В одну колонку
+
+                for (int i = 0; i < months.Count; i += 3)
                 {
+                    var row = new List<InlineKeyboardButton>();
+
+                    for (int j = 0; j < 3 && i + j < months.Count; j++)
+                    {
+                        var month = months[i + j];
+                        var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
+                        row.Add(InlineKeyboardButton.WithCallbackData(
+                            $"{monthName.ToUpper()}",
+                            $"report_month_{year}_{month}"));
+                    }
+
+                    buttons.Add(row.ToArray());
+                }
+            }
+            else
+            {
+                //В три колонки
+
+                foreach (var month in months)
+                {
+                    var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
+                    buttons.Add(new[]
+                    {
                     InlineKeyboardButton.WithCallbackData(
-                        $"{monthName}",
+                        $"{monthName.ToUpper()}",
                         $"report_month_{year}_{month}")
                 });
+                }
             }
-
             // Кнопка "Выбрать год"
             buttons.Add(new[]
             {
                 InlineKeyboardButton.WithCallbackData("Выбрать год", "select_report_year")
             });
-
-            return new InlineKeyboardMarkup(buttons);
-        }
-        public static InlineKeyboardMarkup CreateMonthSelectionKB(List<int> months, int year)
-        {
-            var buttons = new List<InlineKeyboardButton[]>();
-
-            foreach (var month in months)
-            {
-                var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
-                buttons.Add(new[]
-                {
-            InlineKeyboardButton.WithCallbackData(
-                $"{monthName}",
-                $"report_month_{year}_{month}")
-        });
-            }
 
             return new InlineKeyboardMarkup(buttons);
         }
@@ -111,6 +120,14 @@ namespace TGBotLog.Data.Models
             return new InlineKeyboardMarkup(buttons);
 
         }
+
+         public static readonly InlineKeyboardMarkup SelectReportPeriod = new InlineKeyboardMarkup(new[]
+        {
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("Выбрать период", "select_report_period")
+            }
+        });
 
 
     }

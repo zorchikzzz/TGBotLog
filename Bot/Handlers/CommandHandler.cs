@@ -4,7 +4,6 @@ using FamilyBudgetBot.Data.Models;
 using FamilyBudgetBot.Services;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.ReplyMarkups;
 using TGBotLog.Bot.Services;
 using TGBotLog.Data.Models;
 
@@ -16,15 +15,17 @@ namespace FamilyBudgetBot.Bot.Handlers
         private readonly BudgetService _budgetService;
         private readonly PendingActionHandler _pendingActionHandler;
         private readonly BackupService _backupHandler;
-        
+        private readonly ReportService _reportService;
 
 
-        public CommandHandler(ITelegramBotClient bot, BudgetService budgetService, PendingActionHandler pendingActionHandler, BackupService backupHandler, string dbPath)
+
+        public CommandHandler(ITelegramBotClient bot, BudgetService budgetService, PendingActionHandler pendingActionHandler, BackupService backupHandler, ReportService reportService, string dbPath)
         {
             _bot = bot;
             _budgetService = budgetService;
             _pendingActionHandler = pendingActionHandler;
             _backupHandler = backupHandler;
+            _reportService = reportService;
 
         }
 
@@ -47,7 +48,7 @@ namespace FamilyBudgetBot.Bot.Handlers
                     break;
 
                 case "/report":
-                    await GenerateReport(chatId);
+                    await _reportService.GenerateReport(chatId);
                     break;
 
                 case "/help":
@@ -109,117 +110,6 @@ namespace FamilyBudgetBot.Bot.Handlers
         {
             await _bot.SendTextMessageAsync(chatId, MessegeTexts.HelpText, parseMode: ParseMode.Html);
         }
-
-        public async Task GenerateReport(long chatId, int? year = null, int? month = null)
-        {
-            DateTime startDate, endDate;
-            string periodTitle;
-
-            if (year.HasValue && month.HasValue)
-            {
-                startDate = new DateTime(year.Value, month.Value, 1);
-                endDate = startDate.AddMonths(1).AddDays(-1);
-                var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month.Value);
-                periodTitle = $"{monthName} {year.Value}";
-            }
-            else
-            {
-                startDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-                endDate = DateTime.Now;
-                periodTitle = "последний месяц";
-            }
-
-            Console.WriteLine($"Запрос данных за период: {startDate} - {endDate}");
-            var transactions = _budgetService.GetTransactions(
-                startDate,
-                endDate
-                );
-
-            if (transactions.Count == 0)
-            {
-                await _bot.SendTextMessageAsync(chatId, "📭 Нет данных за последний месяц");
-                return;
-            }
-
-            var categories = _budgetService.GetAllCategories();
-
-            var incomeTransactions = transactions.Where(t => t.Type == TransactionType.Income);
-            var expenseTransactions = transactions.Where(t => t.Type == TransactionType.Expense);
-
-            var incomeReport = incomeTransactions
-                .GroupBy(t => t.CategoryId)
-                .Select(g =>
-                {
-                    var category = categories.FirstOrDefault(c => c.Id == g.Key)?.Name ?? "Неизвестная";
-                    return new { Category = category, Total = g.Sum(t => t.Amount) };
-                })
-                .OrderByDescending(r => r.Total);
-
-            var expenseReport = expenseTransactions
-                .GroupBy(t => t.CategoryId)
-                .Select(g =>
-                {
-                    var category = categories.FirstOrDefault(c => c.Id == g.Key)?.Name ?? "Неизвестная";
-                    return new { Category = category, Total = g.Sum(t => t.Amount) };
-                })
-                .OrderByDescending(r => r.Total);
-
-            var totalIncome = incomeReport.Sum(r => r.Total);
-            var totalExpense = expenseReport.Sum(r => r.Total);
-
-            var balance = totalIncome - totalExpense;
-
-            var message = new StringBuilder();
-            message.AppendLine(
-                $"📈 <b>Отчет за {periodTitle}</b>\n\n" +
-                $"💰 <b>Доходы:</b>    {totalIncome,7:N0}\n" +
-                $"💸 <b>Расходы:</b>   {totalExpense,7:N0}\n" +
-                $"📊 <b>Баланс:</b>    {balance,7:N0}\n\n");
-
-            if (incomeReport.Any())
-            {
-                message.AppendLine( "<b>Доходы по категориям:</b>\n" +
-                           string.Join("\n", incomeReport.Select(r => $"{r.Total,-7:N0}                   {r.Category,-9}")) + "\n\n");
-            }
-
-            if (expenseReport.Any())
-            {
-                message.AppendLine( "<b>Расходы по категориям:</b>\n" +
-                           string.Join("\n", expenseReport.Select(r => $"{r.Total,-7:N0}                   {r.Category,-9}")) + "\n\n");
-            }
-if (!year.HasValue && !month.HasValue)
-    {
-        var inlineKeyboard = new InlineKeyboardMarkup(new[]
-        {
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("Выбрать период", "select_report_period")
-            }
-        });
-        
-        await _bot.SendTextMessageAsync(chatId, message.ToString(), 
-            parseMode: ParseMode.Html, 
-            replyMarkup: inlineKeyboard);
-    }
-    else
-    {
-        // Для отчетов за выбранный период также добавляем кнопку выбора периода
-        var inlineKeyboard = new InlineKeyboardMarkup(new[]
-        {
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("Выбрать период", "select_report_period")
-            }
-        });
-        
-        await _bot.SendTextMessageAsync(chatId, message.ToString(), 
-            parseMode: ParseMode.Html,
-            replyMarkup: inlineKeyboard);
-    }
-}
-        
-
-
         public async Task ShowLast10Transactions(long chatId)
         {
             var transactions = _budgetService.GetTransactions(null, null, true);

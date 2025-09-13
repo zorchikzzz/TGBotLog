@@ -4,7 +4,9 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using System.Globalization;
 using Telegram.Bot.Types.ReplyMarkups;
-using TGBotLog.Data.Models ;
+using TGBotLog.Data.Models;
+using System;
+using TGBotLog.Bot.Services;
 
 
 namespace TGBotLog.Bot.Handlers
@@ -15,16 +17,20 @@ namespace TGBotLog.Bot.Handlers
         private readonly PendingActionHandler _pendingActionHandler;
         private readonly CommandHandler _commandHandler;
         private readonly BudgetService _budgetService;
+
+        private readonly ReportService _reportService;
         // словарь для хранения последнего выбранного года
         private readonly Dictionary<long, int> _lastSelectedYear = new Dictionary<long, int>();
 
         public CallbackHandler(ITelegramBotClient bot, PendingActionHandler pendingActionHandler,
-            CommandHandler commandHandler, BudgetService budgetService)
+            CommandHandler commandHandler, BudgetService budgetService, ReportService reportService)
         {
             _bot = bot;
             _pendingActionHandler = pendingActionHandler;
             _budgetService = budgetService;
             _commandHandler = commandHandler;
+            _reportService = reportService;
+            
         }
 
 
@@ -58,29 +64,30 @@ namespace TGBotLog.Bot.Handlers
                     await _pendingActionHandler.HandleCategoryTypeSelection(chatId, "РАСХОД");
                     break;
 
-                // Новые обработчики для выбора периода
+// Вход сюда происходит из очтёта за любой месяц (показываютсямесяца того же года или текущего(если не выбран год))
                 case "select_report_period":
-                    // Используем последний выбранный год, если он есть, иначе текущий год
                     int yearToShow = _lastSelectedYear.ContainsKey(chatId)
                         ? _lastSelectedYear[chatId]
                         : DateTime.Now.Year;
+
                     await ShowYearMonths(chatId, yearToShow);
+                    break;
+               
+// Вход сюда происходит из меню выбора года (показываются месяца года выбранного в меню)
+                case string s when s.StartsWith("select_month_"):
+                    if (int.TryParse(s.Substring("select_month_".Length), out int year))
+                    {
+                        // Сохраняем выбранный год
+                        _lastSelectedYear[chatId] = year;
+                        await ShowYearMonths(chatId, year);
+                    }
                     break;
 
                 case "select_report_year":
                     await ShowYearSelection(chatId);
                     break;
 
-                // В методе HandleCallbackQuery обновим обработчики
-                case string s when s.StartsWith("select_month_"):
-                    if (int.TryParse(s.Substring("select_month_".Length), out int year))
-                    {
-                        // Сохраняем выбранный год
-                        _lastSelectedYear[chatId] = year;
-                        await ShowMonthSelection(chatId, year);
-                    }
-                    break;
-
+// Вход сюда происходит из меню выбора месяца, нажатием на месяц (запускает генерацию отчтёта)
                 case string s when s.StartsWith("report_month_"):
                     var parts = s.Split('_');
                     if (parts.Length >= 4 && int.TryParse(parts[2], out int reportYear) &&
@@ -88,7 +95,7 @@ namespace TGBotLog.Bot.Handlers
                     {
                         // Сохраняем выбранный год
                         _lastSelectedYear[chatId] = reportYear;
-                        await _commandHandler.GenerateReport(chatId, reportYear, reportMonth);
+                        await _reportService.GenerateReport(chatId, reportYear, reportMonth);
                     }
                     break;
 
@@ -114,21 +121,7 @@ namespace TGBotLog.Bot.Handlers
             await _bot.SendTextMessageAsync(chatId, $"Выберите месяц за {year} год или выберите другой год:",
                 replyMarkup: Keyboards.CreateYearMonthSelectionKB(year, months));
         }
-        private async Task ShowMonthSelection(long chatId, int year)
-        {
-            var yearsMonths = _budgetService.GetTransactionYearsMonths();
-            if (!yearsMonths.ContainsKey(year) || yearsMonths[year].Count == 0)
-            {
-                await _bot.SendTextMessageAsync(chatId, "Данные за выбранный год не найдены.");
-                return;
-            }
-
-            var months = yearsMonths[year];
-            
-            await _bot.SendTextMessageAsync(chatId, $"Выберите месяц за {year} год:",
-                replyMarkup: Keyboards.CreateMonthSelectionKB(months, year));
-        }
-
+       
         private async Task ShowYearSelection(long chatId)
         {
             var yearsMonths = _budgetService.GetTransactionYearsMonths();
@@ -146,12 +139,12 @@ namespace TGBotLog.Bot.Handlers
 
 
         public void ResetLastSelectedYear(long chatId)
-{
-    if (_lastSelectedYear.ContainsKey(chatId))
-    {
-        _lastSelectedYear.Remove(chatId);
-    }
-}
+        {
+            if (_lastSelectedYear.ContainsKey(chatId))
+            {
+                _lastSelectedYear.Remove(chatId);
+            }
+        }
 
     }
 
