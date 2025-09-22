@@ -63,3 +63,9 @@ chmod 664 /app/data/budget.db 2>/dev/null || true\n\
 echo "Starting application with database: /app/data/budget.db"\n\
 exec dotnet TGBotLog.dll' > /init.sh && \
     chmod +x /init.sh
+
+# Переключаемся на пользователя appuser
+USER appuser
+
+# Запускаем приложение через скрипт инициализации
+ENTRYPOINT ["/init.sh"]
