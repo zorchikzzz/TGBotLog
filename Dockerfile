@@ -1,3 +1,16 @@
+# Стадия сборки
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Копируем файлы проекта и восстанавливаем зависимости
+COPY *.csproj ./
+RUN dotnet restore
+
+# Копируем весь код и собираем приложение
+COPY . ./
+RUN dotnet publish -c Release -o /app/publish
+
+# Финальная стадия
 FROM mcr.microsoft.com/dotnet/runtime:8.0
 
 WORKDIR /app
@@ -14,14 +27,14 @@ RUN apt-get update && \
 RUN ln -fs /usr/share/zoneinfo/Europe/Moscow /etc/localtime && \
     echo "Europe/Moscow" > /etc/timezone
 
-# Копируем файлы приложения
-COPY . .
-
 # Создаем директорию для данных
 RUN mkdir -p /app/data
 
 # Создаем пользователя и группу
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
+# Копируем собранное приложение из стадии сборки
+COPY --from=build /app/publish .
 
 # Устанавливаем права на директории
 RUN chown -R appuser:appgroup /app && \
@@ -50,9 +63,3 @@ chmod 664 /app/data/budget.db 2>/dev/null || true\n\
 echo "Starting application with database: /app/data/budget.db"\n\
 exec dotnet TGBotLog.dll' > /init.sh && \
     chmod +x /init.sh
-
-# Переключаемся на пользователя appuser
-USER appuser
-
-# Запускаем приложение через скрипт инициализации
-ENTRYPOINT ["/init.sh"]
