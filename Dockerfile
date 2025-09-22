@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/dotnet/runtime:8.0
 
 WORKDIR /app
 
-# Устанавливаем необходимые пакеты + tzdata для часовых поясов
+# Устанавливаем необходимые пакеты
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     sudo \
@@ -18,40 +18,36 @@ RUN ln -fs /usr/share/zoneinfo/Europe/Moscow /etc/localtime && \
 COPY . .
 
 # Создаем директорию для данных
-RUN mkdir -p /data
+RUN mkdir -p /app/data
 
 # Создаем пользователя и группу
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
 # Устанавливаем права на директории
-RUN chown -R appuser:appgroup /app /data && \
-    chmod -R 755 /app && \
-    chmod -R 775 /data
+RUN chown -R appuser:appgroup /app && \
+    chmod -R 755 /app
 
 # Создаем скрипт инициализации базы данных
 RUN echo '#!/bin/sh\n\
-# Проверяем существование файла базы данных в томе\n\
-if [ ! -f /data/database.db ]; then\n\
-    echo "Initializing database from image..."\n\
-    # Пытаемся скопировать базу из образа, если существует\n\
-    if [ -f /app/database.db ]; then\n\
-        cp /app/database.db /data/database.db\n\
-        echo "Database copied from image to volume"\n\
-    else\n\
-        # Создаем новую базу данных SQLite\n\
-        sqlite3 /data/database.db "VACUUM;"\n\
-        echo "New empty database created in volume"\n\
-    fi\n\
+# Создаем директорию для базы данных\n\
+mkdir -p /app/data\n\
+\n\
+# Проверяем существование файла базы данных\n\
+if [ ! -f /app/data/budget.db ]; then\n\
+    echo "Initializing database..."\n\
+    # Создаем новую базу данных SQLite\n\
+    sqlite3 /app/data/budget.db "VACUUM;"\n\
+    echo "New database created: /app/data/budget.db"\n\
 else\n\
-    echo "Using existing database from volume: $(ls -la /data/database.db)"\n\
+    echo "Using existing database: /app/data/budget.db"\n\
 fi\n\
 \n\
 # Устанавливаем правильные права на файл базы данных\n\
-chown appuser:appgroup /data/database.db 2>/dev/null || true\n\
-chmod 664 /data/database.db 2>/dev/null || true\n\
+chown appuser:appgroup /app/data/budget.db 2>/dev/null || true\n\
+chmod 664 /app/data/budget.db 2>/dev/null || true\n\
 \n\
 # Запускаем основное приложение\n\
-echo "Starting application with database: /data/database.db"\n\
+echo "Starting application with database: /app/data/budget.db"\n\
 exec dotnet TGBotLog.dll' > /init.sh && \
     chmod +x /init.sh
 
