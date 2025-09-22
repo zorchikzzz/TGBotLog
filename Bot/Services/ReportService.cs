@@ -13,23 +13,13 @@ public class ReportService
 {
  private readonly ITelegramBotClient _bot;
         private readonly BudgetService _budgetService;
-        private readonly PendingActionHandler _pendingActionHandler;
-        private readonly string _dbPath;
-
     public ReportService(BudgetService budgetService, ITelegramBotClient bot)
     {
         _budgetService = budgetService;
         _bot = bot;
     }
 
-    public ReportService(ITelegramBotClient bot, BudgetService budgetService, PendingActionHandler pendingActionHandler, string dbPath)
-    {
-        _bot = bot;
-        _budgetService = budgetService;
-        _pendingActionHandler = pendingActionHandler;
-        _dbPath = dbPath;
-    }
-public async Task GenerateReport(long chatId, int? year = null, int? month = null)
+   public async Task GenerateReport(long chatId, int? year = null, int? month = null)
     {
         DateTime startDate, endDate;
         string periodTitle;

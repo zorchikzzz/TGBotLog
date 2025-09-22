@@ -2,10 +2,7 @@
 using FamilyBudgetBot.Services;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using System.Globalization;
-using Telegram.Bot.Types.ReplyMarkups;
 using TGBotLog.Data.Models;
-using System;
 using TGBotLog.Bot.Services;
 
 
@@ -17,7 +14,6 @@ namespace TGBotLog.Bot.Handlers
         private readonly PendingActionHandler _pendingActionHandler;
         private readonly CommandHandler _commandHandler;
         private readonly BudgetService _budgetService;
-
         private readonly ReportService _reportService;
         // словарь для хранения последнего выбранного года
         private readonly Dictionary<long, int> _lastSelectedYear = new Dictionary<long, int>();
