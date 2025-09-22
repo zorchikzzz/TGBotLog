@@ -50,7 +50,7 @@ class Program
             var botService = new TelegramBotService(botToken, budgetService, dbPath);
             botService.Start();
 
-            Console.WriteLine("Приложение для управления бюджетом запущено успешно...");
+            Console.WriteLine("Приложение для управления бюджетом собранно по инструкции в доккерфайл из гит хаб и успешно запущенно!!!");
 
             // Бесконечное ожидание вместо Console.ReadLine()
             while (true)
