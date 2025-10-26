@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+﻿ using Microsoft.Data.Sqlite;
 using FamilyBudgetBot.Data.Models;
 using System.Globalization;
 
@@ -230,6 +230,45 @@ namespace FamilyBudgetBot.Data.Repositories
         {
 
         }
-       
+
+        // В BudgetRepository.cs добавить метод
+     
+        // В BudgetRepository.cs добавить метод
+        public List<Transaction> GetTransactionsByCategoryAndPeriod(int categoryId, DateTime startDate, DateTime endDate)
+        {
+            var transactions = new List<Transaction>();
+            using var connection = GetOpenConnection();
+            using var cmd = connection.CreateCommand();
+
+            cmd.CommandText = @"
+    SELECT t.Id, t.Amount, t.Date, t.CategoryId, t.Description 
+    FROM Transactions t
+    WHERE t.CategoryId = $categoryId 
+    AND Date >= $startDate 
+    AND Date <= $endDate
+    ORDER BY t.Date DESC";
+
+            cmd.Parameters.AddWithValue("$categoryId", categoryId);
+            cmd.Parameters.AddWithValue("$startDate", startDate.ToString("o"));
+            cmd.Parameters.AddWithValue("$endDate", endDate.ToString("o"));
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var category = GetCategoryById(reader.GetInt32(3));
+
+                transactions.Add(new Transaction
+                {
+                    Id = reader.GetInt32(0),
+                    Amount = reader.GetDecimal(1),
+                    Date = DateTime.Parse(reader.GetString(2)),
+                    CategoryId = reader.GetInt32(3),
+                    Description = reader.GetString(4),
+                    Type = category?.Type ?? TransactionType.Expense
+                });
+            }
+            return transactions;
+        }
+
     }
 }

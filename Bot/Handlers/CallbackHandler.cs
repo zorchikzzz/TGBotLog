@@ -95,6 +95,43 @@ namespace TGBotLog.Bot.Handlers
                     }
                     break;
 
+                // В CallbackHandler.cs в метод HandleCallbackQuery добавить новый case
+                case string s when s.StartsWith("category_details_"):
+                    var categoryParts = s.Split('_');
+                    if (categoryParts.Length >= 4 &&
+                        int.TryParse(categoryParts[2], out int detailYear) &&
+                        int.TryParse(categoryParts[3], out int detailMonth) &&
+                        int.TryParse(categoryParts[4], out int detailCategoryId))
+                    {
+                        await _reportService.ShowCategoryDetails(chatId, detailYear, detailMonth, detailCategoryId);
+                    }
+                    break;
+
+                // В CallbackHandler.cs в метод HandleCallbackQuery добавить новые cases
+                case string s when s.StartsWith("detailed_report_"):
+                    var detailedParts = s.Split('_');
+                    if (detailedParts.Length >= 3 &&
+                        int.TryParse(detailedParts[2], out int detailedYear) &&
+                        int.TryParse(detailedParts[3], out int detailedMonth))
+                    {
+                        await _reportService.GenerateDetailedReport(chatId, detailedYear, detailedMonth);
+                    }
+                    break;
+
+                case string s when s.StartsWith("back_to_report_"):
+                    var backParts = s.Split('_');
+                    if (backParts.Length >= 4 &&
+                        int.TryParse(backParts[3], out int backYear) &&
+                        int.TryParse(backParts[4], out int backMonth))
+                    {
+                        await _reportService.GenerateReport(chatId, backYear, backMonth);
+                    }
+                    break;
+
+                case "no_action":
+                    // Ничего не делаем при нажатии на разделитель
+                    break;
+
                 default:
                     // Логируем неизвестный callback для отладки
                     Console.WriteLine($"Неизвестный callback: {data}");

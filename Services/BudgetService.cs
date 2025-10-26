@@ -105,5 +105,13 @@ namespace FamilyBudgetBot.Services
         {
             _repository.Dispose();
         }
+
+        // В BudgetService.cs добавить метод
+        public List<Transaction> GetTransactionsByCategoryAndPeriod(int categoryId, DateTime startDate, DateTime endDate)
+        {
+            return _repository.GetTransactionsByCategoryAndPeriod(categoryId, startDate, endDate);
+        }
+
+       
     }
 }
