@@ -110,8 +110,8 @@ public class ReportService
             message.AppendLine();
         }
 
-        // Создаем клавиатуру с кнопкой для детализированного отчета
-        var inlineKeyboard = CreateDetailedReportKeyboard(year, month);
+        // Создаем клавиатуру с кнопками для детализированного отчета и выбора периода
+        var inlineKeyboard = CreateReportKeyboard(year, month);
 
         await _bot.SendTextMessageAsync(
             chatId: chatId,
@@ -191,8 +191,8 @@ public class ReportService
         message.AppendLine($"📊 <b>Баланс:</b> {balance:N0} руб.\n");
         message.AppendLine("Нажмите на категорию для просмотра деталей:");
 
-        // Создаем клавиатуру с кнопками категорий в два столбца
-        var inlineKeyboard = CreateCategoryDetailsKeyboard(incomeReport, expenseReport, year, month);
+        // Создаем клавиатуру с кнопками категорий в два столбца и кнопкой выбора периода
+        var inlineKeyboard = CreateDetailedReportKeyboard(incomeReport, expenseReport, year, month);
 
         await _bot.SendTextMessageAsync(
             chatId: chatId,
@@ -202,20 +202,26 @@ public class ReportService
         );
     }
 
-    private InlineKeyboardMarkup CreateDetailedReportKeyboard(int? year, int? month)
+    private InlineKeyboardMarkup CreateReportKeyboard(int? year, int? month)
     {
-        var callbackData = $"detailed_report_{year ?? DateTime.Now.Year}_{month ?? DateTime.Now.Month}";
+        var detailedCallbackData = $"detailed_report_{year ?? DateTime.Now.Year}_{month ?? DateTime.Now.Month}";
 
-        return new InlineKeyboardMarkup(new[]
+        var buttons = new List<InlineKeyboardButton[]>
         {
             new[]
             {
-                InlineKeyboardButton.WithCallbackData("📊 Показать детали по категориям", callbackData)
+                InlineKeyboardButton.WithCallbackData("📊 Показать детали по категориям", detailedCallbackData)
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("📅 Выбрать период", "select_report_period")
             }
-        });
+        };
+
+        return new InlineKeyboardMarkup(buttons);
     }
 
-    private InlineKeyboardMarkup CreateCategoryDetailsKeyboard(
+    private InlineKeyboardMarkup CreateDetailedReportKeyboard(
         IEnumerable<dynamic> incomeReport,
         IEnumerable<dynamic> expenseReport,
         int? year,
@@ -272,11 +278,12 @@ public class ReportService
             buttons.Add(row.ToArray());
         }
 
-        // Добавляем кнопку возврата к обычному отчету
+        // Добавляем кнопки навигации
         var backCallbackData = $"back_to_report_{year ?? DateTime.Now.Year}_{month ?? DateTime.Now.Month}";
         buttons.Add(new[]
         {
-            InlineKeyboardButton.WithCallbackData("◀️ Назад к отчету", backCallbackData)
+            InlineKeyboardButton.WithCallbackData("◀️ Назад к отчету", backCallbackData),
+            InlineKeyboardButton.WithCallbackData("📅 Выбрать период", "select_report_period")
         });
 
         return new InlineKeyboardMarkup(buttons);
@@ -316,7 +323,7 @@ public class ReportService
             message.AppendLine($"   <i>{description}</i>\n");
         }
 
-        // Кнопки возврата
+        // Кнопки навигации
         var backButton = InlineKeyboardButton.WithCallbackData(
             "◀️ Назад к детализации",
             $"detailed_report_{year}_{month}"
@@ -327,10 +334,15 @@ public class ReportService
             $"back_to_report_{year}_{month}"
         );
 
+        var periodButton = InlineKeyboardButton.WithCallbackData(
+            "📅 Выбрать период",
+            "select_report_period"
+        );
+
         var inlineKeyboard = new InlineKeyboardMarkup(new[]
         {
-            new[] { backButton },
-            new[] { mainReportButton }
+            new[] { backButton, mainReportButton },
+            new[] { periodButton }
         });
 
         await _bot.SendTextMessageAsync(
