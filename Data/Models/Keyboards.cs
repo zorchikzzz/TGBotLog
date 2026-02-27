@@ -129,7 +129,14 @@ namespace TGBotLog.Data.Models
             }
         });
 
-
+        // В Keyboards.cs можно добавить (опционально)
+        public static readonly InlineKeyboardMarkup BackToReportButton = new InlineKeyboardMarkup(new[]
+        {
+    new[]
+    {
+        InlineKeyboardButton.WithCallbackData("◀️ Назад к отчету", "back_to_report")
+    }
+});
     }
 
 }
