@@ -6,21 +6,25 @@ WORKDIR /src
 COPY *.csproj ./
 RUN dotnet restore
 
-# Копируем весь код и собираем приложение
+# Копируем весь код
 COPY . ./
-RUN dotnet publish -c Release -o /app/publish
+
+# Публикуем приложение для Linux x64 (без self-contained, но с включением нативных библиотек)
+RUN dotnet publish -c Release -o /app/publish -r linux-x64 --self-contained false
 
 # Финальная стадия
 FROM mcr.microsoft.com/dotnet/runtime:8.0
 
 WORKDIR /app
 
-# Устанавливаем необходимые пакеты
+# Устанавливаем необходимые системные пакеты для SkiaSharp
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     sudo \
     sqlite3 \
     tzdata \
+    libfontconfig1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Устанавливаем часовой пояс Moscow
