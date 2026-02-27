@@ -226,13 +226,20 @@ namespace FamilyBudgetBot.Data.Repositories
                 );
         }
 
-        public List<MonthlySummary> GetMonthlySummary()
+        public List<MonthlySummary> GetMonthlySummary(int? monthsLimit = null)
         {
             var result = new List<MonthlySummary>();
             using var connection = GetOpenConnection();
             using var cmd = connection.CreateCommand();
 
-            cmd.CommandText = @"
+            string limitClause = "";
+            if (monthsLimit.HasValue)
+            {
+                // Оставляем только последние N месяцев
+                limitClause = $"AND Date >= date('now', '-{monthsLimit.Value} months')";
+            }
+
+            cmd.CommandText = $@"
         SELECT 
             strftime('%Y', Date) AS Year,
             strftime('%m', Date) AS Month,
@@ -240,8 +247,12 @@ namespace FamilyBudgetBot.Data.Repositories
             SUM(CASE WHEN c.Type = 0 THEN t.Amount ELSE 0 END) AS Expense
         FROM Transactions t
         JOIN Categories c ON t.CategoryId = c.Id
+        WHERE 1=1 {limitClause}
         GROUP BY Year, Month
         ORDER BY Year ASC, Month ASC";
+
+            // ... остальной код
+        
 
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
