@@ -1,6 +1,7 @@
-﻿using FamilyBudgetBot.Data.Models;
+﻿using System.Globalization;
+using FamilyBudgetBot.Data.Models;
 using FamilyBudgetBot.Data.Repositories;
-using System.Globalization;
+using static FamilyBudgetBot.Data.Repositories.BudgetRepository;
 
 namespace FamilyBudgetBot.Services
 {
@@ -100,6 +101,11 @@ namespace FamilyBudgetBot.Services
         // В BudgetService.cs
         public Dictionary<int, List<int>> GetTransactionYearsMonths() => 
             _repository.GetTransactionYearsMonths();
+
+
+        public List<MonthlySummary> GetMonthlySummary() => _repository.GetMonthlySummary();
+
+        public BudgetRepository GetRepository() => _repository;
 
         public void CloseConnection()
         {

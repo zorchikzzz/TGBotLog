@@ -226,6 +226,46 @@ namespace FamilyBudgetBot.Data.Repositories
                 );
         }
 
+        public List<MonthlySummary> GetMonthlySummary()
+        {
+            var result = new List<MonthlySummary>();
+            using var connection = GetOpenConnection();
+            using var cmd = connection.CreateCommand();
+
+            cmd.CommandText = @"
+        SELECT 
+            strftime('%Y', Date) AS Year,
+            strftime('%m', Date) AS Month,
+            SUM(CASE WHEN c.Type = 1 THEN t.Amount ELSE 0 END) AS Income,
+            SUM(CASE WHEN c.Type = 0 THEN t.Amount ELSE 0 END) AS Expense
+        FROM Transactions t
+        JOIN Categories c ON t.CategoryId = c.Id
+        GROUP BY Year, Month
+        ORDER BY Year ASC, Month ASC";
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                result.Add(new MonthlySummary
+                {
+                    Year = int.Parse(reader.GetString(0)),
+                    Month = int.Parse(reader.GetString(1)),
+                    Income = reader.GetDecimal(2),
+                    Expense = reader.GetDecimal(3)
+                });
+            }
+            return result;
+        }
+
+        // Вспомогательный класс для хранения сводки
+        public class MonthlySummary
+        {
+            public int Year { get; set; }
+            public int Month { get; set; }
+            public decimal Income { get; set; }
+            public decimal Expense { get; set; }
+        }
+
         public void Dispose()
         {
 

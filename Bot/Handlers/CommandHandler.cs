@@ -4,6 +4,7 @@ using FamilyBudgetBot.Data.Models;
 using FamilyBudgetBot.Services;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InputFiles;
 using TGBotLog.Bot.Services;
 using TGBotLog.Data.Models;
 
@@ -17,7 +18,7 @@ namespace FamilyBudgetBot.Bot.Handlers
         private readonly BackupService _backupHandler;
         private readonly ReportService _reportService;
 
-
+      
 
         public CommandHandler(ITelegramBotClient bot, BudgetService budgetService, PendingActionHandler pendingActionHandler, BackupService backupHandler, ReportService reportService, string dbPath)
         {
@@ -27,6 +28,21 @@ namespace FamilyBudgetBot.Bot.Handlers
             _backupHandler = backupHandler;
             _reportService = reportService;
 
+        }
+
+        public async Task ShowChart(long chatId)
+        {
+            var chartService = new ChartService(_budgetService.GetRepository()); // предполагаем, что есть доступ к репозиторию
+            var chartBytes = chartService.GenerateMonthlyChart();
+
+            if (chartBytes == null)
+            {
+                await _bot.SendTextMessageAsync(chatId, "📭 Нет данных для построения графика.");
+                return;
+            }
+
+            using var stream = new MemoryStream(chartBytes);
+            await _bot.SendPhotoAsync(chatId, new InputOnlineFile(stream, "chart.png"), caption: "📊 Доходы и расходы по месяцам");
         }
 
         public async Task HandleCommand(long chatId, string command)
@@ -69,6 +85,10 @@ namespace FamilyBudgetBot.Bot.Handlers
 
                 case "/restore":
                     await _backupHandler.RequestDatabaseRestore(chatId);
+                    break;
+
+                case "/график":
+                    await ShowChart(chatId);
                     break;
 
                 default:
