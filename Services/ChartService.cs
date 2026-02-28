@@ -232,7 +232,7 @@ namespace FamilyBudgetBot.Services
             for (int i = 0; i < data.Count; i++)
             {
                 var item = data[i];
-                float xBase = marginLeft + (i + 0.5f) * (graphWidth / data.Count);
+                float xBase = marginLeft + (i + 0.6f) * (graphWidth / data.Count);
 
                 // Доход (зелёный)
                 float incomeHeight = (float)(item.Income / maxValue) * graphHeight;

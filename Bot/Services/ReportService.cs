@@ -44,10 +44,13 @@ public class ReportService
 
         var transactions = _budgetService.GetTransactions(startDate, endDate);
         var categories = _budgetService.GetAllCategories();
+        var inlineKeyboard = CreateReportKeyboard(year, month);
 
         if (transactions.Count == 0)
         {
-            await _bot.SendTextMessageAsync(chatId, "📭 Нет данных за выбранный период");
+            await _bot.SendTextMessageAsync(chatId, "📭 Нет данных за выбранный период", parseMode: ParseMode.Html,
+           replyMarkup: CreateReportKeyboard(year,month, false));
+            
             return;
         }
 
@@ -113,7 +116,6 @@ public class ReportService
         }
 
         // Создаем клавиатуру с кнопками для детализированного отчета и выбора периода
-        var inlineKeyboard = CreateReportKeyboard(year, month);
 
      
 
@@ -210,6 +212,8 @@ public class ReportService
         var chartDataList = new List<CategoryChartData>();
         foreach (var category in categories)
         {
+            if (category.Name == "ЗП")
+                continue;
             var incomeTotal = incomeReport.FirstOrDefault(r => r.Category == category.Name)?.Total ?? 0;
             var expenseTotal = expenseReport.FirstOrDefault(r => r.Category == category.Name)?.Total ?? 0;
             if (incomeTotal > 0 || expenseTotal > 0)
@@ -235,21 +239,25 @@ public class ReportService
         }
     }
 
-    private InlineKeyboardMarkup CreateReportKeyboard(int? year, int? month)
+    private InlineKeyboardMarkup CreateReportKeyboard(int? year, int? month, bool hasdata = true)
     {
-        var detailedCallbackData = $"detailed_report_{year ?? DateTime.Now.Year}_{month ?? DateTime.Now.Month}";
+        var buttons = new List<InlineKeyboardButton[]>();
 
-        var buttons = new List<InlineKeyboardButton[]>
+        // Добавляем кнопку деталей только если есть данные
+        if (hasdata)
         {
-            new[]
+            var detailedCallbackData = $"detailed_report_{year ?? DateTime.Now.Year}_{month ?? DateTime.Now.Month}";
+            buttons.Add(new[]
             {
-                InlineKeyboardButton.WithCallbackData("📊 Показать детали по категориям", detailedCallbackData)
-            },
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("📅 Выбрать период", "select_report_period")
-            }
-        };
+            InlineKeyboardButton.WithCallbackData("📊 Показать детали по категориям", detailedCallbackData)
+        });
+        }
+
+        // Всегда добавляем кнопку выбора периода
+        buttons.Add(new[]
+        {
+        InlineKeyboardButton.WithCallbackData("📅 Выбрать период", "select_report_period")
+    });
 
         return new InlineKeyboardMarkup(buttons);
     }
