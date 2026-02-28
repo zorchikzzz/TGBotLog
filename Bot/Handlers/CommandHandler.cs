@@ -30,20 +30,7 @@ namespace FamilyBudgetBot.Bot.Handlers
 
         }
 
-        public async Task ShowChart(long chatId)
-        {
-            var chartService = new ChartService(_budgetService.GetRepository()); // предполагаем, что есть доступ к репозиторию
-            var chartBytes = chartService.GenerateMonthlyChart();
-
-            if (chartBytes == null)
-            {
-                await _bot.SendTextMessageAsync(chatId, "📭 Нет данных для построения графика.");
-                return;
-            }
-
-            using var stream = new MemoryStream(chartBytes);
-            await _bot.SendPhotoAsync(chatId, new InputOnlineFile(stream, "chart.png"), caption: "📊 Доходы и расходы по месяцам");
-        }
+     
 
         public async Task HandleCommand(long chatId, string command)
         {
@@ -95,6 +82,20 @@ namespace FamilyBudgetBot.Bot.Handlers
                     await _bot.SendTextMessageAsync(chatId, "Неизвестная команда. Используйте команду /help для справки.");
                     break;
             }
+        }
+        public async Task ShowChart(long chatId)
+        {
+            var chartService = new ChartService(_budgetService.GetRepository()); // предполагаем, что есть доступ к репозиторию
+            var chartBytes = chartService.GenerateMonthlyChart();
+
+            if (chartBytes == null)
+            {
+                await _bot.SendTextMessageAsync(chatId, "📭 Нет данных для построения графика.");
+                return;
+            }
+
+            using var stream = new MemoryStream(chartBytes);
+            await _bot.SendPhotoAsync(chatId, new InputOnlineFile(stream, "chart.png"), caption: "📊 Доходы и расходы по месяцам");
         }
 
         public async Task ShowExpenseCategories(long chatId)

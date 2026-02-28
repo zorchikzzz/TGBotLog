@@ -1,12 +1,14 @@
+using System.Globalization;
+using System.Text;
 using FamilyBudgetBot.Bot.Handlers;
 using FamilyBudgetBot.Data.Models;
 using FamilyBudgetBot.Services;
-using System.Globalization;
-using System.Text;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
 using TGBotLog.Data.Models;
+using static FamilyBudgetBot.Services.ChartService;
 
 namespace TGBotLog.Bot.Services;
 
@@ -113,6 +115,9 @@ public class ReportService
         // Создаем клавиатуру с кнопками для детализированного отчета и выбора периода
         var inlineKeyboard = CreateReportKeyboard(year, month);
 
+     
+
+
         await _bot.SendTextMessageAsync(
             chatId: chatId,
             text: message.ToString(),
@@ -193,13 +198,41 @@ public class ReportService
 
         // Создаем клавиатуру с кнопками категорий в два столбца и кнопкой выбора периода
         var inlineKeyboard = CreateDetailedReportKeyboard(incomeReport, expenseReport, year, month);
-
+              
         await _bot.SendTextMessageAsync(
             chatId: chatId,
             text: message.ToString(),
             parseMode: ParseMode.Html,
             replyMarkup: inlineKeyboard
         );
+
+        // Обрабаотываем уже полученные данные по категриям и расходам для того что бы передать их в обработанном виде в конструктор диагарам
+        var chartDataList = new List<CategoryChartData>();
+        foreach (var category in categories)
+        {
+            var incomeTotal = incomeReport.FirstOrDefault(r => r.Category == category.Name)?.Total ?? 0;
+            var expenseTotal = expenseReport.FirstOrDefault(r => r.Category == category.Name)?.Total ?? 0;
+            if (incomeTotal > 0 || expenseTotal > 0)
+            {
+                chartDataList.Add(new CategoryChartData
+                {
+                    CategoryName = category.Name,
+                    Income = incomeTotal,
+                    Expense = expenseTotal
+                });
+            }
+        }
+
+        // Создаём ChartService (сервис по графикам и диагармам) (репозиторий нужен для конструктора, но не используется в этом методе)
+        var chartService = new ChartService(_budgetService.GetRepository());
+        var chartBytes = chartService.GenerateCategoryChart(chartDataList, periodTitle);
+
+        if (chartBytes != null)
+        {
+            using var stream = new MemoryStream(chartBytes);
+            await _bot.SendPhotoAsync(chatId, new InputOnlineFile(stream, "categories.png"),
+                caption: "📊 График по категориям");
+        }
     }
 
     private InlineKeyboardMarkup CreateReportKeyboard(int? year, int? month)
