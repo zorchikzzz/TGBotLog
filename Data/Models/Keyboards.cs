@@ -121,7 +121,7 @@ namespace TGBotLog.Data.Models
 
         }
 
-         public static readonly InlineKeyboardMarkup SelectReportPeriod = new InlineKeyboardMarkup(new[]
+        public static readonly InlineKeyboardMarkup SelectReportPeriod = new InlineKeyboardMarkup(new[]
         {
             new[]
             {

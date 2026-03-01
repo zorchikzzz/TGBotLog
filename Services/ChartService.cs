@@ -1,7 +1,6 @@
 ﻿using SkiaSharp;
 using FamilyBudgetBot.Data.Repositories;
-using System.IO;
-using System.Linq;
+using TGBotLog.Data.Models;
 
 namespace FamilyBudgetBot.Services
 {
@@ -163,12 +162,7 @@ namespace FamilyBudgetBot.Services
         }
     
 
-    public class CategoryChartData
-        {
-            public string CategoryName { get; set; }
-            public decimal Income { get; set; }
-            public decimal Expense { get; set; }
-        }
+    
 
         public byte[] GenerateCategoryChart(List<CategoryChartData> data, string periodTitle)
         {
