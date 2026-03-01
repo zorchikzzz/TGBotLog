@@ -74,7 +74,7 @@ namespace FamilyBudgetBot.Bot.Handlers
                     await _backupHandler.RequestDatabaseRestore(chatId);
                     break;
 
-                case "/diagarm":
+                case "/diagram":
                     await ShowChart(chatId);
                     break;
 
