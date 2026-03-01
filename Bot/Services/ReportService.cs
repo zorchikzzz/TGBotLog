@@ -31,7 +31,7 @@ public class ReportService
         if (year.HasValue && month.HasValue)
         {
             startDate = new DateTime(year.Value, month.Value, 1);
-            endDate = startDate.AddMonths(1).AddDays(-1);
+            endDate = startDate.AddMonths(1).AddTicks(-1);
             var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month.Value);
             periodTitle = $"{monthName} {year.Value}";
         }
@@ -136,7 +136,7 @@ public class ReportService
         if (year.HasValue && month.HasValue)
         {
             startDate = new DateTime(year.Value, month.Value, 1);
-            endDate = startDate.AddMonths(1).AddDays(-1);
+            endDate = startDate.AddMonths(1).AddTicks(-1);
             var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month.Value);
             periodTitle = $"{monthName} {year.Value}";
         }
@@ -334,7 +334,7 @@ public class ReportService
     {
         var startDate = new DateTime(year, month, 1);
         var endDate = startDate.AddMonths(1).AddDays(-1);
-
+        endDate = startDate.AddMonths(1).AddTicks(-1);
         var transactions = _budgetService.GetTransactionsByCategoryAndPeriod(categoryId, startDate, endDate);
         var category = _budgetService.GetCategoryById(categoryId);
         var monthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month);
