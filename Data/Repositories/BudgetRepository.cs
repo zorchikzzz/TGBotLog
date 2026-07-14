@@ -45,9 +45,9 @@ namespace FamilyBudgetBot.Data.Repositories
                 try
                 {
                     using var testConnection = GetOpenConnection();
-                    using var cmd = testConnection.CreateCommand();
-                    cmd.CommandText = "SELECT name FROM sqlite_master LIMIT 1";
-                    cmd.ExecuteScalar();
+                    using var testCmd = testConnection.CreateCommand();
+                    testCmd.CommandText = "SELECT name FROM sqlite_master LIMIT 1";
+                    testCmd.ExecuteScalar();
                     // Если дошли сюда – файл цел
                 }
                 catch (SqliteException ex) when (ex.Message.Contains("file is not a database") ||
@@ -82,7 +82,6 @@ namespace FamilyBudgetBot.Data.Repositories
             cmd.ExecuteNonQuery();
         }
 
-        // Остальные методы (AddCategory, AddTransaction, GetAllCategories и т.д.) без изменений
         public int AddCategory(string name, TransactionType type = TransactionType.Expense, string color = "#3498db", string icon = "📁")
         {
             using var connection = GetOpenConnection();
