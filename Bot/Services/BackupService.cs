@@ -1,5 +1,6 @@
 ﻿using FamilyBudgetBot.Bot.Handlers;
 using FamilyBudgetBot.Services;
+using Microsoft.Data.Sqlite;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.InputFiles;
@@ -21,15 +22,11 @@ namespace TGBotLog.Bot.Services
             _dbPath = dbPath;
         }
 
-    
         public async Task SendDatabaseBackup(long chatId)
         {
             try
             {
-                // Закрываем все соединения с БД
                 _budgetService.CloseConnection();
-
-                // Даем время на освобождение файла
                 await Task.Delay(1000);
 
                 if (!System.IO.File.Exists(_dbPath))
@@ -38,7 +35,6 @@ namespace TGBotLog.Bot.Services
                     return;
                 }
 
-                // Создаем временную копию файла
                 var tempBackupPath = Path.GetTempFileName();
                 System.IO.File.Copy(_dbPath, tempBackupPath, true);
 
@@ -51,7 +47,6 @@ namespace TGBotLog.Bot.Services
                     );
                 }
 
-                // Удаляем временный файл
                 System.IO.File.Delete(tempBackupPath);
             }
             catch (Exception ex)
@@ -72,31 +67,57 @@ namespace TGBotLog.Bot.Services
         {
             try
             {
-                var file = await _bot.GetFileAsync(document.FileId);
-
-                // Создаем временную копию текущей БД на случай ошибки
-                var tempBackupPath = _dbPath + ".backup";
-                if (System.IO.File.Exists(_dbPath))
+                // 1. Проверка расширения файла
+                var fileName = document.FileName ?? "unknown";
+                if (!fileName.EndsWith(".db", StringComparison.OrdinalIgnoreCase) &&
+                    !fileName.EndsWith(".sqlite", StringComparison.OrdinalIgnoreCase))
                 {
-                    System.IO.File.Copy(_dbPath, tempBackupPath, true);
+                    await _bot.SendTextMessageAsync(chatId,
+                        "❌ Неподдерживаемый формат файла. Ожидается файл с расширением .db или .sqlite.");
+                    _pendingActionHandler.RemovePendingAction(chatId);
+                    return;
                 }
 
-                // Скачиваем и сохраняем новую БД
-                await using (var saveStream = System.IO.File.OpenWrite(_dbPath))
+                var file = await _bot.GetFileAsync(document.FileId);
+
+                // 2. Скачиваем во временный файл
+                var tempPath = Path.GetTempFileName();
+                await using (var saveStream = System.IO.File.OpenWrite(tempPath))
                 {
                     await _bot.DownloadFileAsync(file.FilePath, saveStream);
                 }
 
+                // 3. Проверяем, что это валидная SQLite-база
+                if (!IsValidSqliteDatabase(tempPath))
+                {
+                    System.IO.File.Delete(tempPath);
+                    await _bot.SendTextMessageAsync(chatId,
+                        "❌ Файл не является корректной базой данных SQLite.");
+                    _pendingActionHandler.RemovePendingAction(chatId);
+                    return;
+                }
+
+                // 4. Создаём бэкап текущей базы (если существует)
+                var backupPath = _dbPath + ".backup";
+                if (System.IO.File.Exists(_dbPath))
+                {
+                    System.IO.File.Copy(_dbPath, backupPath, true);
+                }
+
+                // 5. Заменяем базу данных
+                System.IO.File.Copy(tempPath, _dbPath, true);
+                System.IO.File.Delete(tempPath);
+
                 await _bot.SendTextMessageAsync(chatId,
                     "✅ База данных успешно восстановлена! Бот будет перезапущен.");
 
-                // Перезапускаем приложение
+                // 6. Перезапускаем приложение
                 await Task.Delay(1000);
                 Environment.Exit(0);
             }
             catch (Exception ex)
             {
-                // Восстанавливаем из бекапа в случае ошибки
+                // Восстанавливаем из бэкапа при ошибке
                 if (System.IO.File.Exists(_dbPath + ".backup"))
                 {
                     System.IO.File.Copy(_dbPath + ".backup", _dbPath, true);
@@ -109,6 +130,24 @@ namespace TGBotLog.Bot.Services
             finally
             {
                 _pendingActionHandler.RemovePendingAction(chatId);
+            }
+        }
+
+        // Проверка, является ли файл валидной SQLite-базой
+        private bool IsValidSqliteDatabase(string filePath)
+        {
+            try
+            {
+                using var connection = new SqliteConnection($"Data Source={filePath};");
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "SELECT name FROM sqlite_master LIMIT 1";
+                cmd.ExecuteScalar();
+                return true;
+            }
+            catch
+            {
+                return false;
             }
         }
     }

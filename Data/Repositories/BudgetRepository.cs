@@ -1,6 +1,7 @@
-﻿ using Microsoft.Data.Sqlite;
+﻿using Microsoft.Data.Sqlite;
 using FamilyBudgetBot.Data.Models;
 using System.Globalization;
+using System.IO; // Для работы с файлами
 
 namespace FamilyBudgetBot.Data.Repositories
 {
@@ -21,30 +22,65 @@ namespace FamilyBudgetBot.Data.Repositories
             return connection;
         }
 
+        // Получаем путь к файлу из строки подключения
+        private string GetDbFilePath()
+        {
+            var parts = _connectionString.Split(';');
+            foreach (var part in parts)
+            {
+                if (part.Trim().StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+                {
+                    return part.Substring("Data Source=".Length).Trim();
+                }
+            }
+            return "budget.db"; // запасной вариант
+        }
+
         private void InitializeDatabase()
         {
+            string dbPath = GetDbFilePath();
+
+            // Проверяем, существует ли файл и является ли он валидной SQLite-базой
+            if (File.Exists(dbPath))
+            {
+                try
+                {
+                    using var connection = GetOpenConnection();
+                    using var cmd = connection.CreateCommand();
+                    cmd.CommandText = "SELECT name FROM sqlite_master LIMIT 1";
+                    cmd.ExecuteScalar();
+                    // Если дошли сюда – файл цел
+                }
+                catch (SqliteException ex) when (ex.Message.Contains("file is not a database") ||
+                                                  ex.Message.Contains("not a database"))
+                {
+                    // Файл повреждён – удаляем его
+                    File.Delete(dbPath);
+                }
+                // Другие исключения (например, ошибка доступа) пробрасываем дальше
+            }
+
+            // Теперь открываем соединение (если файла не было – он создастся)
             using var connection = GetOpenConnection();
             using var cmd = connection.CreateCommand();
 
+            // Создаём таблицы (если они ещё не существуют)
             cmd.CommandText = @"
-            CREATE TABLE IF NOT EXISTS Categories (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Name TEXT NOT NULL UNIQUE,
-                Type INTEGER NOT NULL DEFAULT 0,
-                Color TEXT DEFAULT '#3498db',
-                Icon TEXT DEFAULT '📁'
-            )";
-            cmd.ExecuteNonQuery();
-
-            cmd.CommandText = @"
-            CREATE TABLE IF NOT EXISTS Transactions (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Amount REAL NOT NULL,
-                Date TEXT NOT NULL,
-                CategoryId INTEGER NOT NULL,
-                Description TEXT,
-                FOREIGN KEY (CategoryId) REFERENCES Categories(Id)
-            )";
+                CREATE TABLE IF NOT EXISTS Categories (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Name TEXT NOT NULL UNIQUE,
+                    Type INTEGER NOT NULL DEFAULT 0,
+                    Color TEXT DEFAULT '#3498db',
+                    Icon TEXT DEFAULT '📁'
+                );
+                CREATE TABLE IF NOT EXISTS Transactions (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Amount REAL NOT NULL,
+                    Date TEXT NOT NULL,
+                    CategoryId INTEGER NOT NULL,
+                    Description TEXT,
+                    FOREIGN KEY (CategoryId) REFERENCES Categories(Id)
+                )";
             cmd.ExecuteNonQuery();
         }
 
@@ -68,8 +104,8 @@ namespace FamilyBudgetBot.Data.Repositories
             using var connection = GetOpenConnection();
             using var cmd = connection.CreateCommand();
             cmd.CommandText = @"
-            INSERT INTO Transactions (Amount, Date, CategoryId, Description) 
-            VALUES ($amount, $date, $categoryId, $description)";
+                INSERT INTO Transactions (Amount, Date, CategoryId, Description) 
+                VALUES ($amount, $date, $categoryId, $description)";
 
             cmd.Parameters.AddWithValue("$amount", transaction.Amount);
             cmd.Parameters.AddWithValue("$date", transaction.Date.ToString("o"));
@@ -148,17 +184,17 @@ namespace FamilyBudgetBot.Data.Repositories
             return null;
         }
 
-        public List<Transaction> GetTransactions(DateTime? startDate = null, DateTime? endDate = null, 
-            bool last10 = false )
+        public List<Transaction> GetTransactions(DateTime? startDate = null, DateTime? endDate = null,
+            bool last10 = false)
         {
             var transactions = new List<Transaction>();
             using var connection = GetOpenConnection();
             using var cmd = connection.CreateCommand();
 
             cmd.CommandText = @"
-            SELECT t.Id, t.Amount, t.Date, t.CategoryId, t.Description 
-            FROM Transactions t
-            WHERE 1=1";
+                SELECT t.Id, t.Amount, t.Date, t.CategoryId, t.Description 
+                FROM Transactions t
+                WHERE 1=1";
 
             if (startDate.HasValue)
             {
@@ -194,16 +230,15 @@ namespace FamilyBudgetBot.Data.Repositories
             }
             return transactions;
         }
-        
-        // В BudgetRepository.cs
+
         public Dictionary<int, List<int>> GetTransactionYearsMonths()
         {
             var result = new Dictionary<int, List<int>>();
-            
+
             using var connection = GetOpenConnection();
             using var cmd = connection.CreateCommand();
             cmd.CommandText = "SELECT DISTINCT Date FROM Transactions ORDER BY Date DESC";
-            
+
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
@@ -211,17 +246,16 @@ namespace FamilyBudgetBot.Data.Repositories
                 {
                     if (!result.ContainsKey(date.Year))
                         result[date.Year] = new List<int>();
-                        
+
                     if (!result[date.Year].Contains(date.Month))
                         result[date.Year].Add(date.Month);
                 }
             }
-            
-            // Сортируем года по убыванию, а месяцы по возрастанию внутри года
+
             return result
                 .OrderByDescending(x => x.Key)
                 .ToDictionary(
-                    y => y.Key, 
+                    y => y.Key,
                     y => y.Value.OrderBy(m => m).ToList()
                 );
         }
@@ -235,24 +269,20 @@ namespace FamilyBudgetBot.Data.Repositories
             string limitClause = "";
             if (monthsLimit.HasValue)
             {
-                // Оставляем только последние N месяцев
                 limitClause = $"AND Date >= date('now', '-{monthsLimit.Value} months')";
             }
 
             cmd.CommandText = $@"
-        SELECT 
-            strftime('%Y', Date) AS Year,
-            strftime('%m', Date) AS Month,
-            SUM(CASE WHEN c.Type = 1 THEN t.Amount ELSE 0 END) AS Income,
-            SUM(CASE WHEN c.Type = 0 THEN t.Amount ELSE 0 END) AS Expense
-        FROM Transactions t
-        JOIN Categories c ON t.CategoryId = c.Id
-        WHERE 1=1 {limitClause}
-        GROUP BY Year, Month
-        ORDER BY Year ASC, Month ASC";
-
-            // ... остальной код
-        
+                SELECT 
+                    strftime('%Y', Date) AS Year,
+                    strftime('%m', Date) AS Month,
+                    SUM(CASE WHEN c.Type = 1 THEN t.Amount ELSE 0 END) AS Income,
+                    SUM(CASE WHEN c.Type = 0 THEN t.Amount ELSE 0 END) AS Expense
+                FROM Transactions t
+                JOIN Categories c ON t.CategoryId = c.Id
+                WHERE 1=1 {limitClause}
+                GROUP BY Year, Month
+                ORDER BY Year ASC, Month ASC";
 
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
@@ -268,7 +298,6 @@ namespace FamilyBudgetBot.Data.Repositories
             return result;
         }
 
-        // Вспомогательный класс для хранения сводки
         public class MonthlySummary
         {
             public int Year { get; set; }
@@ -277,14 +306,6 @@ namespace FamilyBudgetBot.Data.Repositories
             public decimal Expense { get; set; }
         }
 
-        public void Dispose()
-        {
-
-        }
-
-        // В BudgetRepository.cs добавить метод
-     
-        // В BudgetRepository.cs добавить метод
         public List<Transaction> GetTransactionsByCategoryAndPeriod(int categoryId, DateTime startDate, DateTime endDate)
         {
             var transactions = new List<Transaction>();
@@ -292,12 +313,12 @@ namespace FamilyBudgetBot.Data.Repositories
             using var cmd = connection.CreateCommand();
 
             cmd.CommandText = @"
-    SELECT t.Id, t.Amount, t.Date, t.CategoryId, t.Description 
-    FROM Transactions t
-    WHERE t.CategoryId = $categoryId 
-    AND Date >= $startDate 
-    AND Date <= $endDate
-    ORDER BY t.Date DESC";
+                SELECT t.Id, t.Amount, t.Date, t.CategoryId, t.Description 
+                FROM Transactions t
+                WHERE t.CategoryId = $categoryId 
+                AND Date >= $startDate 
+                AND Date <= $endDate
+                ORDER BY t.Date DESC";
 
             cmd.Parameters.AddWithValue("$categoryId", categoryId);
             cmd.Parameters.AddWithValue("$startDate", startDate.ToString("o"));
@@ -321,5 +342,9 @@ namespace FamilyBudgetBot.Data.Repositories
             return transactions;
         }
 
+        public void Dispose()
+        {
+            // Освобождение ресурсов не требуется, т.к. соединения закрываются через using
+        }
     }
 }
