@@ -1,7 +1,7 @@
 ﻿using Microsoft.Data.Sqlite;
 using FamilyBudgetBot.Data.Models;
 using System.Globalization;
-using System.IO; // Для работы с файлами
+using System.IO;
 
 namespace FamilyBudgetBot.Data.Repositories
 {
@@ -22,7 +22,6 @@ namespace FamilyBudgetBot.Data.Repositories
             return connection;
         }
 
-        // Получаем путь к файлу из строки подключения
         private string GetDbFilePath()
         {
             var parts = _connectionString.Split(';');
@@ -33,7 +32,7 @@ namespace FamilyBudgetBot.Data.Repositories
                     return part.Substring("Data Source=".Length).Trim();
                 }
             }
-            return "budget.db"; // запасной вариант
+            return "budget.db";
         }
 
         private void InitializeDatabase()
@@ -45,8 +44,8 @@ namespace FamilyBudgetBot.Data.Repositories
             {
                 try
                 {
-                    using var connection = GetOpenConnection();
-                    using var cmd = connection.CreateCommand();
+                    using var testConnection = GetOpenConnection();
+                    using var cmd = testConnection.CreateCommand();
                     cmd.CommandText = "SELECT name FROM sqlite_master LIMIT 1";
                     cmd.ExecuteScalar();
                     // Если дошли сюда – файл цел
@@ -57,14 +56,13 @@ namespace FamilyBudgetBot.Data.Repositories
                     // Файл повреждён – удаляем его
                     File.Delete(dbPath);
                 }
-                // Другие исключения (например, ошибка доступа) пробрасываем дальше
+                // Другие исключения пробрасываем дальше
             }
 
             // Теперь открываем соединение (если файла не было – он создастся)
             using var connection = GetOpenConnection();
             using var cmd = connection.CreateCommand();
 
-            // Создаём таблицы (если они ещё не существуют)
             cmd.CommandText = @"
                 CREATE TABLE IF NOT EXISTS Categories (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,6 +82,7 @@ namespace FamilyBudgetBot.Data.Repositories
             cmd.ExecuteNonQuery();
         }
 
+        // Остальные методы (AddCategory, AddTransaction, GetAllCategories и т.д.) без изменений
         public int AddCategory(string name, TransactionType type = TransactionType.Expense, string color = "#3498db", string icon = "📁")
         {
             using var connection = GetOpenConnection();
